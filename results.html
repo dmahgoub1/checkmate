@@ -11,14 +11,13 @@
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .header-logo { width: 120px; margin: 20px 0 30px 0; cursor: pointer; }
         .results-container { width: 100%; max-width: 500px; }
-        .match-header { text-align: center; margin-bottom: 30px; }
         .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; }
         .obs-card { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border-left: 4px solid var(--brand); }
         .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
         .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
         .btn-contact { background: var(--brand); color: #fff; }
         #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; align-items:center; justify-content:center; }
-        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; max-width: 350px; border: 1px solid #333; }
+        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -29,11 +28,10 @@
 
     <div id="login-modal">
         <div class="modal-content">
-            <h3>Unlock Verification</h3>
-            <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 25px;">Log in to stay updated on this person or to contact previous submitters securely.</p>
+            <h3>Login Required</h3>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Please verify your account to receive email alerts or contact submitters.</p>
             <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleModalLogin"></div>
             <div class="g_id_signin" data-type="standard"></div>
-            <button onclick="document.getElementById('login-modal').style.display='none'" style="background:none; border:none; color:#555; margin-top:20px; cursor:pointer;">Dismiss</button>
         </div>
     </div>
 
@@ -42,46 +40,38 @@
         const userMode = sessionStorage.getItem('user_mode');
         const container = document.getElementById('results-display');
 
-        if (!result) {
-            container.innerHTML = "<h2 style='text-align:center;'>No search data found.</h2>";
-        } else {
+        if (result) {
             let html = `
-                <div class="match-header">
-                    <h1>${result.status === 'match' ? 'Match Identified' : 'New Profile Started'}</h1>
-                    <p style="color: #a0a6b5;">${result.status === 'match' ? 'We found history for this person.' : 'You are the first to record this person.'}</p>
+                <div style="text-align:center; margin-bottom:20px;">
+                    <h1>${result.status === 'match' ? 'Match Found' : 'First Entry Created'}</h1>
                 </div>
                 <div class="profile-card">
-                    <img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px; border: 1px solid #333;">
-                    <h3 style="margin-top:0;">Records for ${result.user_query.name}</h3>
+                    <img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px;">
+                    <h3>Observations for ${result.user_query.name}</h3>
             `;
 
             if (userMode === 'verified') {
                 html += `
-                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Notify me of future matches</button>
-                    <button class="btn-action btn-contact" onclick="alert('Submitter notified. Check your email for their response.')">Reach out to submitters</button>
+                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Email Me Future Matches</button>
+                    <button class="btn-action btn-contact" onclick="alert('Submitter notified via Checkmate secure mail.')">Contact Previous Submitter</button>
                 `;
             } else {
                 html += `
-                    <button class="btn-action btn-notify" onclick="document.getElementById('login-modal').style.display='flex'">🔔 Get future alerts for this person</button>
-                    <button class="btn-action btn-contact" style="opacity:0.6" onclick="document.getElementById('login-modal').style.display='flex'">Contact Submitter (Login Required)</button>
+                    <button class="btn-action btn-notify" onclick="document.getElementById('login-modal').style.display='flex'">🔔 Get Email Alerts</button>
                 `;
             }
 
-            // Show observations in reverse (newest first)
-            const observations = [...result.observations].reverse();
-            observations.forEach(obs => {
+            result.observations.reverse().forEach(obs => {
                 html += `
                     <div class="obs-card">
-                        <small style="color:var(--brand); font-weight:700;">RECORDED: ${obs.submitted_on}</small>
-                        <p style="margin: 10px 0 5px 0;"><strong>Location:</strong> ${obs.city}</p>
-                        <p style="margin: 0 0 10px 0;"><strong>Active Dates:</strong> ${obs.date}</p>
-                        <p style="font-style:italic; color:#ccc; border-top: 1px solid #333; padding-top:10px;">"${obs.text || 'No additional details provided.'}"</p>
+                        <small style="color:var(--brand);">RECORDED: ${obs.submitted_on}</small>
+                        <p><strong>Location:</strong> ${obs.city}</p>
+                        <p><strong>Dates:</strong> ${obs.date}</p>
+                        <p style="font-style:italic;">"${obs.text || 'No comment provided.'}"</p>
                     </div>
                 `;
             });
-
-            html += `</div>`;
-            container.innerHTML = html;
+            container.innerHTML = html + "</div>";
         }
 
         async function toggleWatchlist(name) {
@@ -89,17 +79,16 @@
             const resp = await fetch('/add-to-watchlist', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ email: email, subject_name: name })
+                body: JSON.stringify({ email: email, subject_name: name, notify_by_email: true })
             });
-            if(resp.ok) alert("Success! You will receive email notifications for " + name);
+            if(resp.ok) alert("Watchlist active! You will receive email alerts for " + name);
         }
 
         function handleModalLogin(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
             sessionStorage.setItem('user_mode', 'verified');
             sessionStorage.setItem('user_email', payload.email);
-            sessionStorage.setItem('user_name', payload.name);
-            location.reload(); 
+            location.reload();
         }
     </script>
 </body>

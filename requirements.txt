@@ -2,5 +2,7 @@ flask
 flask-cors
 pymongo
 numpy
-face-recognition
 Pillow
+face-recognition-models
+--find-links https://wheels.galaxyproject.org/ dlib
+face-recognition

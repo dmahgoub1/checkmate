@@ -3,122 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Checkmate App - Welcome</title>
+    <title>Checkmate - Safety First</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        :root {
-            --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%);
-            --dark-bg: #000; --card-bg: #111; --border: #222;
-        }
-        body { font-family: 'Poppins', sans-serif; background: var(--dark-bg); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        
-        .welcome-card { background: var(--card-bg); padding: 40px 20px; border-radius: 35px; border: 1px solid var(--border); width: 100%; max-width: 450px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.6); }
-        .logo { width: 140px; margin-bottom: 20px; }
-        h1 { font-size: 1.5rem; margin-bottom: 10px; }
-        p { color: #a0a6b5; font-size: 0.85rem; margin-bottom: 30px; }
-
-        /* Feature Comparison Table */
-        .feature-table { width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 0.8rem; text-align: left; background: #080808; border-radius: 15px; overflow: hidden; }
-        .feature-table th { background: #1a1a1a; padding: 12px; color: #fff; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-        .feature-table td { padding: 12px; border-bottom: 1px solid #111; }
-        .check { color: #00ff88; font-weight: bold; text-align: center; }
-        .cross { color: #ff4b4b; font-weight: bold; text-align: center; opacity: 0.5; }
-        .feature-text { color: #eee; }
-
-        .btn-anon {
-            background: transparent; border: 1px solid #333; color: #fff; padding: 16px;
-            border-radius: 14px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 20px;
-            transition: 0.3s; font-size: 0.9rem;
-        }
-        .btn-anon:hover { background: #1a1a1a; }
-        .divider { margin: 25px 0; color: #444; font-size: 0.7rem; letter-spacing: 3px; font-weight: 700; }
-        #g_id_signin_wrapper { display: flex; justify-content: center; width: 100%; }
+        :root { --brand: #ff4b81; --dark: #000; }
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px; }
+        .logo { width: 180px; margin-bottom: 30px; }
+        h1 { font-weight: 700; font-size: 2.5rem; margin-bottom: 10px; }
+        p { color: #a0a6b5; max-width: 400px; margin-bottom: 40px; line-height: 1.6; }
+        .btn-container { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        .btn { padding: 18px; border-radius: 15px; border: none; font-weight: 700; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        .btn-guest { background: #1a1a1a; color: #fff; border: 1px solid #333; }
+        .login-box { background: #fff; border-radius: 15px; padding: 5px; display: flex; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div class="welcome-card">
-        <img src="logo.png" alt="Checkmate" class="logo">
-        <h1>Know the Truth</h1>
-        <p>Compare the benefits of joining our verified community.</p>
+    <img src="logo.png" alt="Checkmate Logo" class="logo">
+    <h1>Verify Before You Fly.</h1>
+    <p>Securely search and share dating experiences to keep the community safe.</p>
 
-        <table class="feature-table">
-            <thead>
-                <tr>
-                    <th>Feature</th>
-                    <th style="text-align:center;">Guest</th>
-                    <th style="text-align:center;">User</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="feature-text">AI Face Search & Upload</td>
-                    <td class="check">✔</td>
-                    <td class="check">✔</td>
-                </tr>
-                <tr>
-                    <td class="feature-text">Check for Match History</td>
-                    <td class="check">✔</td>
-                    <td class="check">✔</td>
-                </tr>
-                <tr>
-                    <td class="feature-text">View Multiple Photos</td>
-                    <td class="check">✔</td>
-                    <td class="check">✔</td>
-                </tr>
-                <tr>
-                    <td class="feature-text">Detect Dual-Dating Status</td>
-                    <td class="check">✔</td>
-                    <td class="check">✔</td>
-                </tr>
-                <tr>
-                    <td class="feature-text">Future Match Notifications</td>
-                    <td class="cross">✘</td>
-                    <td class="check">✔</td>
-                </tr>
-                <tr>
-                    <td class="feature-text">Anonymously Contact Others</td>
-                    <td class="cross">✘</td>
-                    <td class="check">✔</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div id="g_id_onload"
-             data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com"
-             data-context="signin"
-             data-ux_mode="popup"
-             data-callback="handleCredentialResponse"
-             data-auto_prompt="false">
+    <div class="btn-container">
+        <div class="login-box">
+            <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleLogin"></div>
+            <div class="g_id_signin" data-type="standard"></div>
         </div>
-        
-        <div id="g_id_signin_wrapper">
-            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="filled_blue" data-text="continue_with" data-size="large" data-width="340"></div>
-        </div>
-
-        <div class="divider">OR</div>
-
-        <button class="btn-anon" onclick="enterAnonymously()">Enter Anonymously</button>
+        <button class="btn btn-guest" onclick="continueAsGuest()">CONTINUE AS GUEST</button>
     </div>
 
     <script>
-        function enterAnonymously() {
-            sessionStorage.setItem('user_mode', 'anonymous');
-            sessionStorage.setItem('user_name', 'Guest');
-            window.location.href = 'search.html';
-        }
-
-        function handleCredentialResponse(response) {
-            const base64Url = response.credential.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const payload = JSON.parse(window.atob(base64));
-            
+        function handleLogin(response) {
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
             sessionStorage.setItem('user_mode', 'verified');
             sessionStorage.setItem('user_email', payload.email);
             sessionStorage.setItem('user_name', payload.name);
             sessionStorage.setItem('user_pic', payload.picture);
-            
+            window.location.href = 'search.html';
+        }
+
+        function continueAsGuest() {
+            sessionStorage.setItem('user_mode', 'guest');
             window.location.href = 'search.html';
         }
     </script>
