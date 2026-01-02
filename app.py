@@ -20,11 +20,10 @@ db = client.checkmate_db
 subjects_col = db.subjects
 
 def calculate_distance(desc1, desc2):
-    # Converts lists to numpy arrays and ensures they are the same size
     d1 = np.array(desc1)
     d2 = np.array(desc2)
     if d1.shape != d2.shape:
-        return 999.0  # Force no-match if shapes differ (handles old data)
+        return 999.0
     return np.linalg.norm(d1 - d2)
 
 @app.route('/')
@@ -49,7 +48,6 @@ def submit_and_check():
         
         image_bytes = base64.b64decode(encoded)
 
-        # Sightengine API Call
         files = { 'media': ('image.jpg', image_bytes, 'image/jpeg') }
         params = {
             'api_user': SIGHTENGINE_USER,
@@ -63,7 +61,6 @@ def submit_and_check():
         if output.get('status') != 'success' or not output.get('faces'):
             return jsonify({"status": "no_face", "message": "No face detected"}), 200
 
-        # Extracting 10 landmarks for a more unique fingerprint
         f = output['faces'][0]['features']
         new_descriptor = [
             f['left_eye']['x'], f['left_eye']['y'],
@@ -73,13 +70,14 @@ def submit_and_check():
             f['right_mouth_corner']['x'], f['right_mouth_corner']['y']
         ]
 
-        # Match Logic
         all_subjects = list(subjects_col.find({}))
         match_found = None
-        threshold = 0.12 # Landmark sensitivity
+        # THRESHOLD UPDATED: 0.25 is more lenient for matches
+        threshold = 0.25 
 
         for subject in all_subjects:
             dist = calculate_distance(new_descriptor, subject['descriptor'])
+            print(f"Distance to {subject['name']}: {dist}") # Check Render logs for this!
             if dist < threshold:
                 match_found = subject
                 break

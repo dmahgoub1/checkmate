@@ -9,20 +9,25 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; --card: #111; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .header-logo { width: 120px; margin: 20px 0 30px 0; cursor: pointer; }
+        .header-logo { width: 120px; margin: 20px 0 10px 0; cursor: pointer; }
         .results-container { width: 100%; max-width: 500px; }
-        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; }
+        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; position: relative;}
         .obs-card { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border-left: 4px solid var(--brand); }
-        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; font-size: 0.9rem;}
         .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
         .btn-contact { background: var(--brand); color: #fff; }
+        .btn-new-search { background: transparent; color: #888; border: 1px solid #333; margin-bottom: 20px; }
         #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
         .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; max-width: 320px; }
     </style>
 </head>
 <body>
     <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
+    
+    <button class="btn-action btn-new-search" onclick="window.location.href='search.html'">← NEW SEARCH</button>
+
     <div class="results-container" id="results-display"></div>
+
     <div id="login-modal">
         <div class="modal-content">
             <h3>Sign In to Proceed</h3>
@@ -31,23 +36,48 @@
             <button onclick="closeModal()" style="background:none; border:none; color:#555; margin-top:20px; cursor:pointer;">Cancel</button>
         </div>
     </div>
+
     <script>
         const result = JSON.parse(sessionStorage.getItem('lastResult'));
         const container = document.getElementById('results-display');
 
         function renderResults() {
             const userMode = sessionStorage.getItem('user_mode');
-            if (!result) { container.innerHTML = "<h2>No data.</h2>"; return; }
-            let html = `<div class="profile-card"><img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px;"><h3>Records for ${result.user_query.name}</h3>`;
+            if (!result || !result.observations) { 
+                container.innerHTML = "<h2 style='text-align:center;'>No data. Try again.</h2>"; 
+                return; 
+            }
+
+            const displayName = (result.user_query && result.user_query.name) ? result.user_query.name : "Subject";
+            let html = `
+                <div class="profile-card">
+                    <img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px; border: 1px solid #333;">
+                    <h1 style="margin:0; font-size:1.8rem;">${result.status === 'match' ? 'Match Found' : 'Profile Created'}</h1>
+                    <p style="color:#888; margin-bottom:20px;">Identity: <strong>${displayName}</strong></p>
+            `;
+
             if (userMode === 'verified') {
-                html += `<button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Email Me Future Matches</button><button class="btn-action btn-contact">Contact Submitter</button>`;
+                html += `
+                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${displayName}')">🔔 Email Me Future Matches</button>
+                    <button class="btn-action btn-contact" onclick="alert('Notification sent.')">Contact Submitter</button>
+                `;
             } else {
                 html += `<button class="btn-action btn-notify" onclick="openModal()">🔓 Sign In for Email Alerts</button>`;
             }
-            [...result.observations].reverse().forEach(obs => {
-                html += `<div class="obs-card"><small>${obs.submitted_on}</small><p><strong>City:</strong> ${obs.city}</p><p><strong>Active:</strong> ${obs.date}</p><p>"${obs.text || 'No details.'}"</p></div>`;
+
+            const obsList = [...result.observations].reverse();
+            obsList.forEach(obs => {
+                html += `
+                    <div class="obs-card">
+                        <small style="color:var(--brand); font-weight:700;">${obs.submitted_on}</small>
+                        <p style="margin:5px 0; font-size:0.85rem;"><strong>City:</strong> ${obs.city}</p>
+                        <p style="margin:5px 0; font-size:0.85rem;"><strong>Active:</strong> ${obs.date}</p>
+                        <p style="font-style:italic; color:#ccc; border-top:1px solid #222; margin-top:10px; padding-top:10px; font-size:0.9rem;">"${obs.text || 'No description provided.'}"</p>
+                    </div>
+                `;
             });
-            container.innerHTML = html + "</div>";
+
+            container.innerHTML = html + "</div><button class='btn-action btn-new-search' onclick='window.location.href=\"search.html\"'>START ANOTHER SEARCH</button>";
         }
 
         function openModal() { document.getElementById('login-modal').style.display = 'flex'; }
@@ -60,8 +90,8 @@
         }
         async function toggleWatchlist(name) {
             const email = sessionStorage.getItem('user_email');
-            const resp = await fetch('/add-to-watchlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, subject_name: name }) });
-            if(resp.ok) alert("Notifications enabled!");
+            await fetch('/add-to-watchlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, subject_name: name }) });
+            alert("Email notifications enabled!");
         }
         renderResults();
     </script>
