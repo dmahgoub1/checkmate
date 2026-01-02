@@ -59,7 +59,6 @@
         </div>
     </div>
 <script>
-    // THE UPDATED ADDRESS
     const API_BASE = "https://checkmate-5doe.onrender.com"; 
 
     let currentFile = null;
@@ -71,7 +70,7 @@
             document.getElementById('status-dot').className = "dot online";
             document.getElementById('status-text').innerText = "DATABASE ACTIVE";
         } catch (e) { 
-            console.error(e);
+            console.error("Model load failed:", e);
             document.getElementById('status-text').innerText = "OFFLINE"; 
         }
     }
@@ -88,7 +87,7 @@
     async function handleProcess() {
         const name = document.getElementById('subj-name').value;
         const city = document.getElementById('subj-city').value;
-        if(!currentFile || !name) return alert("Please upload a photo and enter a name.");
+        if(!currentFile || !name) return alert("Photo and Name are required.");
         
         const rawImg = await faceapi.bufferToImage(currentFile);
         const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
