@@ -28,23 +28,8 @@
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
         input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
         
-        /* Premium Date Picker Styling */
-        input[type="date"] {
-            color-scheme: dark;
-            position: relative;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            background: transparent;
-            bottom: 0;
-            color: transparent;
-            cursor: pointer;
-            height: auto;
-            left: 0;
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: auto;
-        }
+        input[type="date"] { color-scheme: dark; position: relative; }
+        input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
 
         .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
@@ -71,17 +56,11 @@
             <div id="form-ui" style="margin-top: 25px;">
                 <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
                 <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
-                
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex:1;"><label>Date Started</label><input type="date" id="date-start"></div>
                     <div class="form-group" style="flex:1;"><label>Date Ended</label><input type="date" id="date-end"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Comments (optional)</label>
-                    <textarea id="obs-text" rows="3" placeholder="Add any details if you wish..."></textarea>
-                </div>
-                
+                <div class="form-group"><label>Comments (optional)</label><textarea id="obs-text" rows="3" placeholder="Add any details if you wish..."></textarea></div>
                 <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">
                     <span id="btn-text">SEARCH</span>
                     <div class="spinner" id="btn-spinner"></div>
@@ -138,47 +117,35 @@
         const btn = document.getElementById('submit-btn');
         const spinner = document.getElementById('btn-spinner');
         const bText = document.getElementById('btn-text');
-        
-        if(!finalBase64 || !document.getElementById('subj-name').value) {
-            return alert("Photo and Name required.");
-        }
-
+        if(!finalBase64 || !document.getElementById('subj-name').value) return alert("Photo and Name required.");
         btn.disabled = true;
         bText.innerText = "SEARCHING...";
         spinner.style.display = "block";
-
         try {
             const fileInput = document.getElementById('file-input');
             const rawImg = await faceapi.bufferToImage(fileInput.files[0]);
             const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-            
             if (!result) {
                 alert("Face not detected. Try a clearer photo.");
                 resetButton();
                 return;
             }
-
             const startDate = document.getElementById('date-start').value;
             const endDate = document.getElementById('date-end').value;
             const formattedContext = (startDate || endDate) ? `${startDate} to ${endDate}` : "Date not specified";
-
             const payload = {
                 "descriptor": Array.from(result.descriptor),
                 "image_data": finalBase64, 
                 "name": document.getElementById('subj-name').value, 
                 "city": document.getElementById('subj-city').value,
                 "date_context": formattedContext,
-                "start": startDate,
-                "end": endDate,
                 "review_text": document.getElementById('obs-text').value || ""
             };
-
             const resp = await fetch(API_BASE + "/submit-and-check", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
-
             const data = await resp.json();
             data.user_query = payload;
             sessionStorage.setItem('lastResult', JSON.stringify(data));
@@ -189,7 +156,6 @@
             resetButton();
         }
     }
-
     function resetButton() {
         document.getElementById('submit-btn').disabled = false;
         document.getElementById('btn-text').innerText = "SEARCH";

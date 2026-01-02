@@ -1,11 +1,11 @@
 import os
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
-from bson.objectid import ObjectId
 
-app = Flask(__name__)
+# Initialize Flask to look for static files (HTML/CSS/JS) in the root folder
+app = Flask(__name__, static_folder='.')
 CORS(app)
 
 # --- DATABASE CONFIGURATION ---
@@ -15,13 +15,18 @@ db = client.checkmate_db
 subjects_col = db.subjects
 
 def calculate_distance(desc1, desc2):
-    """Calculates Euclidean distance between two face descriptors."""
     return np.linalg.norm(np.array(desc1) - np.array(desc2))
 
+# --- ROUTE TO SERVE THE WEBSITE ---
 @app.route('/')
-def health_check():
-    return "Checkmate API is Live.", 200
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
 
+@app.route('/results.html')
+def serve_results():
+    return send_from_directory(app.static_folder, 'results.html')
+
+# --- API ENDPOINT ---
 @app.route('/submit-and-check', methods=['POST', 'OPTIONS'])
 def submit_and_check():
     if request.method == 'OPTIONS':
@@ -49,28 +54,22 @@ def submit_and_check():
             break
 
     if match_found:
-        # Create the new observation record
         new_obs = {
             "city": new_city,
             "date": new_date_context,
             "text": new_review,
             "image": new_image
         }
-        
-        # Add it to the existing subject's history
         subjects_col.update_one(
             {"_id": match_found["_id"]},
             {"$push": {"observations": new_obs}}
         )
-        
-        # Return history including the original photo
         return jsonify({
             "status": "match",
             "observations": match_found.get("observations", []) + [new_obs]
         })
 
     else:
-        # Create a new subject document
         new_subject = {
             "name": new_name,
             "descriptor": new_descriptor,
@@ -83,11 +82,7 @@ def submit_and_check():
             }]
         }
         subjects_col.insert_one(new_subject)
-        
-        return jsonify({
-            "status": "no_match",
-            "message": "New profile created."
-        })
+        return jsonify({"status": "no_match", "message": "New profile created."})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
