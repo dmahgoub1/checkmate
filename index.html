@@ -14,8 +14,8 @@
             --text-dim: #a0a6b5; --border: #222222; --success: #4ade80;
         }
         body { font-family: 'Poppins', sans-serif; background-color: var(--dark-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        header { text-align: center; padding: 50px 20px 30px 20px; }
-        .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; cursor: pointer; }
+        header { text-align: center; padding: 50px 20px 30px 20px; cursor: pointer; }
+        .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; }
         .tagline { color: var(--text-dim); font-size: 0.9rem; margin-top: 20px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
         .app-container { width: 90%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 40px; }
         .status-indicator { background: rgba(255,255,255,0.03); padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
@@ -23,15 +23,14 @@
         .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
         .content { padding: 30px; }
         #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.01); }
-        #upload-zone:hover { border-color: #ff4b81; background: rgba(255,75,129,0.05); }
+        #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
         .form-group { margin-bottom: 20px; text-align: left; }
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
-        input, textarea { width: 100%; background: #000; border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; font-size: 0.9rem; }
+        input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
         .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; }
-        #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
     </style>
 </head>
-<body>
+<body onload="initAI()">
     <header onclick="window.location.reload()">
         <img src="logo.png" alt="Portal Logo" class="main-logo">
         <div class="tagline">Verify Your Connections. Trust Your Heart.</div>
@@ -39,28 +38,27 @@
     <div class="app-container">
         <div class="status-indicator">
             <div id="status-dot" class="dot"></div>
-            <span id="status-text">INITIALIZING AI...</span>
+            <span id="status-text">CONNECTING TO SECURE CLOUD...</span>
         </div>
         <div class="content">
             <div id="upload-zone" onclick="document.getElementById('file-input').click()">
-                <div id="upload-placeholder">📸<br><span style="font-size: 0.8rem; color: var(--text-dim);">Tap to Upload Photo</span></div>
+                <div id="upload-placeholder">📸<br>Tap to Upload Subject Photo</div>
                 <img id="preview-img-ui">
                 <input type="file" id="file-input" hidden accept="image/*">
             </div>
             <div id="form-ui" style="margin-top: 25px;">
-                <div class="form-group"><label>Name</label><input type="text" id="subj-name"></div>
-                <div class="form-group"><label>City</label><input type="text" id="subj-city"></div>
+                <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
+                <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="e.g. Los Angeles"></div>
                 <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Start</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>End</label><input type="date" id="date-end"></div>
+                    <div class="form-group" style="flex:1;"><label>Met On</label><input type="date" id="date-start"></div>
+                    <div class="form-group" style="flex:1;"><label>Last Seen</label><input type="date" id="date-end"></div>
                 </div>
                 <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
-                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">RUN CHECK</button>
+                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">RUN BACKGROUND CHECK</button>
             </div>
         </div>
     </div>
 <script>
-    // Uses the domain you are currently on automatically
     const API_BASE = window.location.origin; 
 
     async function initAI() {
@@ -69,10 +67,11 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             document.getElementById('status-dot').className = "dot online";
-            document.getElementById('status-text').innerText = "SYSTEM ACTIVE";
+            document.getElementById('status-text').innerText = "CLOUD DATABASE ACTIVE";
         } catch (e) { 
-            document.getElementById('status-text').innerText = "RETRYING..."; 
-            setTimeout(initAI, 3000);
+            console.error(e);
+            document.getElementById('status-text').innerText = "RETRYING CONNECTION..."; 
+            setTimeout(initAI, 5000);
         }
     }
 
@@ -90,19 +89,19 @@
 
     async function handleProcess() {
         const btn = document.getElementById('submit-btn');
-        if(!currentFile || !document.getElementById('subj-name').value) return alert("Photo and Name required.");
+        if(!currentFile || !document.getElementById('subj-name').value) return alert("Photo and Name are required.");
         
         btn.disabled = true;
-        btn.innerText = "SCANNING FACE...";
+        btn.innerText = "SCANNING BIOMETRICS...";
 
         try {
             const rawImg = await faceapi.bufferToImage(currentFile);
             const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
             
             if (!result) {
-                alert("No face found in photo.");
+                alert("Face not detected. Try a clearer photo.");
                 btn.disabled = false;
-                btn.innerText = "RUN CHECK";
+                btn.innerText = "RUN BACKGROUND CHECK";
                 return;
             }
             
@@ -115,15 +114,16 @@
                 review_text: document.getElementById('obs-text').value
             };
 
-            console.log("Sending to:", `${API_BASE}/submit-and-check`);
-
             const resp = await fetch(`${API_BASE}/submit-and-check`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
 
-            if (!resp.ok) throw new Error(`Server Error: ${resp.status}`);
+            if (!resp.ok) {
+                const errData = await resp.text();
+                throw new Error("Server error (500). Please check MongoDB IP Whitelist.");
+            }
 
             const data = await resp.json();
             data.user_query = payload;
@@ -131,12 +131,11 @@
             window.location.href = 'results.html';
         } catch (err) {
             console.error(err);
-            alert("Error: " + err.message);
+            alert(err.message);
             btn.disabled = false;
-            btn.innerText = "RUN CHECK";
+            btn.innerText = "RUN BACKGROUND CHECK";
         }
     }
-    initAI();
 </script>
 </body>
 </html>
