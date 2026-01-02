@@ -15,52 +15,55 @@
         }
         body { font-family: 'Poppins', sans-serif; background-color: var(--dark-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         header { text-align: center; padding: 50px 20px 30px 20px; }
-        .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; }
+        .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; cursor: pointer; }
         .tagline { color: var(--text-dim); font-size: 0.9rem; margin-top: 20px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
-        .app-container { width: 100%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 20px; }
+        .app-container { width: 90%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 40px; }
         .status-indicator { background: rgba(255,255,255,0.03); padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
         .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .content { padding: 40px; }
-        #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; }
-        .form-group { margin-bottom: 25px; text-align: left; }
-        label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; }
-        input, select, textarea { width: 100%; background: #000000; border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: white; font-family: inherit; box-sizing: border-box; }
-        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; }
-        #preview-img-ui { width: 100%; height: 200px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
+        .content { padding: 30px; }
+        #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.01); }
+        #upload-zone:hover { border-color: #ff4b81; background: rgba(255,75,129,0.05); }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
+        input, textarea { width: 100%; background: #000; border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; font-size: 0.9rem; }
+        input:focus { border-color: #ff4b81; outline: none; }
+        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; transition: transform 0.2s; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+        #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <header>
+    <header onclick="window.location.reload()">
         <img src="logo.png" alt="Portal Logo" class="main-logo">
         <div class="tagline">Verify Your Connections. Trust Your Heart.</div>
     </header>
     <div class="app-container">
         <div class="status-indicator">
             <div id="status-dot" class="dot"></div>
-            <span id="status-text">CONNECTING TO SECURE SERVER...</span>
+            <span id="status-text">SYSTEM INITIALIZING...</span>
         </div>
         <div class="content">
             <div id="upload-zone" onclick="document.getElementById('file-input').click()">
-                <div id="upload-placeholder">📸<br>Select Photo</div>
+                <div id="upload-placeholder">📸<br><span style="font-size: 0.8rem; color: var(--text-dim);">Tap to Upload Subject Photo</span></div>
                 <img id="preview-img-ui">
                 <input type="file" id="file-input" hidden accept="image/*">
             </div>
-            <div id="form-ui" style="margin-top: 30px;">
-                <div class="form-group"><label>Subject Name</label><input type="text" id="subj-name"></div>
-                <div class="form-group"><label>City</label><input type="text" id="subj-city"></div>
+            <div id="form-ui" style="margin-top: 25px;">
+                <div class="form-group"><label>Subject Name</label><input type="text" id="subj-name" placeholder="Enter Full Name"></div>
+                <div class="form-group"><label>Location / City</label><input type="text" id="subj-city" placeholder="e.g. Los Angeles, CA"></div>
                 <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Start Date</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>End Date</label><input type="date" id="date-end"></div>
+                    <div class="form-group" style="flex:1;"><label>Met On</label><input type="date" id="date-start"></div>
+                    <div class="form-group" style="flex:1;"><label>Last Seen</label><input type="date" id="date-end"></div>
                 </div>
-                <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
-                <button type="button" class="btn-main" onclick="handleProcess()">SUBMIT & CHECK</button>
+                <div class="form-group"><label>Key Observations</label><textarea id="obs-text" rows="3" placeholder="Add any details for future reference..."></textarea></div>
+                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">RUN BACKGROUND CHECK</button>
             </div>
         </div>
     </div>
 <script>
-    // Updated to your official domain
-    const API_BASE = "https://www.thecheckmateapp.com"; 
+    const API_BASE = window.location.origin; 
 
     async function initAI() {
         try {
@@ -68,10 +71,11 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             document.getElementById('status-dot').className = "dot online";
-            document.getElementById('status-text').innerText = "DATABASE ACTIVE";
+            document.getElementById('status-text').innerText = "DATABASE SECURE & ACTIVE";
         } catch (e) { 
-            console.error(e);
-            document.getElementById('status-text').innerText = "OFFLINE"; 
+            console.error("AI Initialization Error:", e);
+            document.getElementById('status-text').innerText = "CONNECTING TO ENCRYPTED CLOUD..."; 
+            setTimeout(initAI, 5000);
         }
     }
 
@@ -88,30 +92,48 @@
     };
 
     async function handleProcess() {
+        const btn = document.getElementById('submit-btn');
         const name = document.getElementById('subj-name').value;
-        const city = document.getElementById('subj-city').value;
-        if(!currentFile || !name) return alert("Photo and Name are required.");
+        if(!currentFile || !name) return alert("Photo and Name are required for processing.");
         
-        const rawImg = await faceapi.bufferToImage(currentFile);
-        const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-        if (!result) return alert("No face detected.");
-        
-        const payload = {
-            descriptor: Array.from(result.descriptor),
-            name: name, city: city,
-            start: document.getElementById('date-start').value,
-            end: document.getElementById('date-end').value,
-            review_text: document.getElementById('obs-text').value
-        };
-        const resp = await fetch(`${API_BASE}/submit-and-check`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const data = await resp.json();
-        data.user_query = payload;
-        sessionStorage.setItem('lastResult', JSON.stringify(data));
-        window.location.href = 'results.html';
+        btn.disabled = true;
+        btn.innerText = "ANALYZING BIOMETRICS...";
+
+        try {
+            const rawImg = await faceapi.bufferToImage(currentFile);
+            const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
+            
+            if (!result) {
+                alert("Face not detected. Please use a clearer photo.");
+                btn.disabled = false;
+                btn.innerText = "RUN BACKGROUND CHECK";
+                return;
+            }
+            
+            const payload = {
+                descriptor: Array.from(result.descriptor),
+                name: name, 
+                city: document.getElementById('subj-city').value,
+                start: document.getElementById('date-start').value,
+                end: document.getElementById('date-end').value,
+                review_text: document.getElementById('obs-text').value
+            };
+
+            const resp = await fetch(`${API_BASE}/submit-and-check`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            data.user_query = payload;
+            sessionStorage.setItem('lastResult', JSON.stringify(data));
+            window.location.href = 'results.html';
+        } catch (err) {
+            console.error(err);
+            alert("Connection error. Please try again.");
+            btn.disabled = false;
+            btn.innerText = "RUN BACKGROUND CHECK";
+        }
     }
     initAI();
 </script>
