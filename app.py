@@ -41,11 +41,11 @@ def submit_and_check():
         return jsonify({"error": "No image data"}), 400
 
     try:
-        # Clean Base64 and convert to binary for Sightengine
-        if "," in image_b64:
-            image_b64 = image_b64.split(",")[1]
-        image_bytes = base64.b64decode(image_b64)
+        # 1. Clean Base64
+        header, encoded = image_b64.split(",", 1) if "," in image_b64 else (None, image_b64)
+        image_bytes = base64.b64decode(encoded)
 
+        # 2. Call Sightengine
         files = { 'media': ('image.jpg', image_bytes, 'image/jpeg') }
         params = {
             'api_user': SIGHTENGINE_USER,
@@ -59,17 +59,21 @@ def submit_and_check():
         if output.get('status') == 'failure' or not output.get('faces'):
             return jsonify({"status": "no_face", "message": "No face detected."}), 200
 
-        # Create descriptor from landmarks
+        # 3. FIX: Mapping to Sightengine's specific JSON structure
         face = output['faces'][0]
+        feats = face['features']
+        
+        # We extract 6 specific coordinates to create a unique facial ID
         new_descriptor = [
-            face['shape']['eye_left'][0], face['shape']['eye_left'][1],
-            face['shape']['eye_right'][0], face['shape']['eye_right'][1],
-            face['shape']['nose_tip'][0], face['shape']['nose_tip'][1]
+            feats['left_eye']['x'], feats['left_eye']['y'],
+            feats['right_eye']['x'], feats['right_eye']['y'],
+            feats['nose_tip']['x'], feats['nose_tip']['y']
         ]
 
+        # 4. Search for matches
         all_subjects = list(subjects_col.find({}))
         match_found = None
-        threshold = 0.05 
+        threshold = 0.08 # Adjusted for landmark precision
 
         for subject in all_subjects:
             dist = calculate_distance(new_descriptor, subject['descriptor'])
@@ -82,13 +86,16 @@ def submit_and_check():
             "date": data.get("date_context"),
             "submitted_on": datetime.now().strftime("%b %d, %Y"),
             "text": data.get("review_text", ""),
-            "image": f"data:image/jpeg;base64,{image_b64}",
+            "image": image_b64, # Keep full b64 for display
             "submitter": data.get("submitter_email", "anonymous")
         }
 
         if match_found:
             subjects_col.update_one({"_id": match_found["_id"]}, {"$push": {"observations": current_sighting}})
-            return jsonify({"status": "match", "observations": match_found["observations"] + [current_sighting]})
+            return jsonify({
+                "status": "match", 
+                "observations": match_found["observations"] + [current_sighting]
+            })
         else:
             subjects_col.insert_one({
                 "name": data.get("name"),
@@ -98,6 +105,7 @@ def submit_and_check():
             return jsonify({"status": "no_match", "observations": [current_sighting]})
 
     except Exception as e:
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/add-to-watchlist', methods=['POST'])
