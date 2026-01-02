@@ -17,23 +17,18 @@
         header { text-align: center; padding: 50px 20px 30px 20px; cursor: pointer; }
         .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; }
         .tagline { color: var(--text-dim); font-size: 0.9rem; margin-top: 20px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
-        
         .app-container { width: 90%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 40px; }
         .status-indicator { background: rgba(255,255,255,0.03); padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
         .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        
         .content { padding: 30px; }
         #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.01); transition: 0.3s; }
         #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
-        
         .form-group { margin-bottom: 20px; text-align: left; }
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
         input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
-        
-        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
-        
         .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -46,7 +41,7 @@
     <div class="app-container">
         <div class="status-indicator">
             <div id="status-dot" class="dot"></div>
-            <span id="status-text">INITIALIZING SECURE LINK...</span>
+            <span id="status-text">INITIALIZING...</span>
         </div>
         <div class="content">
             <div id="upload-zone" onclick="document.getElementById('file-input').click()">
@@ -54,31 +49,15 @@
                 <img id="preview-img-ui">
                 <input type="file" id="file-input" hidden accept="image/*">
             </div>
-            
             <div id="form-ui" style="margin-top: 25px;">
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" id="subj-name" placeholder="Full Name">
-                </div>
-                <div class="form-group">
-                    <label>City</label>
-                    <input type="text" id="subj-city" placeholder="Location">
-                </div>
-                <div class="form-group">
-                    <label>When did you date this person?</label>
-                    <input type="text" id="date-context" placeholder="e.g. Summer 2024, 2 years ago">
-                </div>
-                
+                <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
+                <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
+                <div class="form-group"><label>When did you date this person?</label><input type="text" id="date-context" placeholder="e.g. Summer 2024"></div>
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex:1;"><label>Started</label><input type="date" id="date-start"></div>
                     <div class="form-group" style="flex:1;"><label>Ended</label><input type="date" id="date-end"></div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Observations</label>
-                    <textarea id="obs-text" rows="3" placeholder="Add any details..."></textarea>
-                </div>
-                
+                <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
                 <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">
                     <span id="btn-text">SEARCH</span>
                     <div class="spinner" id="btn-spinner"></div>
@@ -86,7 +65,6 @@
             </div>
         </div>
     </div>
-
 <script>
     const API_BASE = window.location.origin; 
     let finalBase64 = "";
@@ -96,27 +74,20 @@
             await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-            
             const check = await fetch(`${API_BASE}/submit-and-check`, { method: 'OPTIONS' });
             if (check.ok) {
                 document.getElementById('status-dot').className = "dot online";
                 document.getElementById('status-text').innerText = "SECURE CLOUD ACTIVE";
             }
-        } catch (e) { 
-            document.getElementById('status-text').innerText = "RECONNECTING..."; 
-            setTimeout(initAI, 5000); 
-        }
+        } catch (e) { document.getElementById('status-text').innerText = "RECONNECTING..."; setTimeout(initAI, 5000); }
     }
 
     document.getElementById('file-input').onchange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                // Compress image to 400px max to save DB space
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 const maxDim = 400; 
@@ -125,7 +96,7 @@
                 else { if (h > maxDim) { w *= maxDim / h; h = maxDim; } }
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(img, 0, 0, w, h);
-                
+                // Back to 0.7 quality for a slightly clearer image
                 finalBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 document.getElementById('preview-img-ui').src = finalBase64;
                 document.getElementById('preview-img-ui').style.display = 'block';
@@ -139,27 +110,18 @@
     async function handleProcess() {
         const btn = document.getElementById('submit-btn');
         const spinner = document.getElementById('btn-spinner');
-        const btnText = document.getElementById('btn-text');
-
-        if(!finalBase64 || !document.getElementById('subj-name').value) {
-            return alert("Photo and Name are required.");
-        }
-        
+        if(!finalBase64 || !document.getElementById('subj-name').value) return alert("Photo and Name required.");
         btn.disabled = true;
-        btnText.innerText = "SEARCHING...";
+        document.getElementById('btn-text').innerText = "SEARCHING...";
         spinner.style.display = "block";
-
         try {
-            // Use face-api to get the descriptor
             const rawImg = await faceapi.bufferToImage(document.getElementById('file-input').files[0]);
             const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-            
             if (!result) {
-                alert("Face not detected. Please use a clearer, front-facing photo.");
+                alert("Face not detected.");
                 resetButton();
                 return;
             }
-            
             const payload = {
                 descriptor: Array.from(result.descriptor),
                 image_data: finalBase64, 
@@ -170,20 +132,15 @@
                 end: document.getElementById('date-end').value,
                 review_text: document.getElementById('obs-text').value
             };
-
             const resp = await fetch(`${API_BASE}/submit-and-check`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
-
-            if (!resp.ok) throw new Error("Cloud connection failed.");
-
             const data = await resp.json();
-            data.user_query = payload; // Keep local data for the results page
+            data.user_query = payload;
             sessionStorage.setItem('lastResult', JSON.stringify(data));
             window.location.href = 'results.html';
-            
         } catch (err) { 
             alert(err.message); 
             resetButton();
@@ -191,12 +148,9 @@
     }
 
     function resetButton() {
-        const btn = document.getElementById('submit-btn');
-        const spinner = document.getElementById('btn-spinner');
-        const btnText = document.getElementById('btn-text');
-        btn.disabled = false;
-        btnText.innerText = "SEARCH";
-        spinner.style.display = "none";
+        document.getElementById('submit-btn').disabled = false;
+        document.getElementById('btn-text').innerText = "SEARCH";
+        document.getElementById('btn-spinner').style.display = "none";
     }
 </script>
 </body>
