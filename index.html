@@ -24,10 +24,10 @@
         .content { padding: 40px; }
         #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.01); transition: 0.3s; }
         .form-group { margin-bottom: 25px; text-align: left; }
-        label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-        input, select, textarea { width: 100%; background: #000000; border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: white; font-family: inherit; box-sizing: border-box; font-size: 0.95rem; }
-        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; box-shadow: 0 10px 25px rgba(255, 75, 129, 0.3); margin-top: 10px; font-size: 1rem; }
-        #preview-img-ui { width: 100%; height: 200px; border-radius: 20px; object-fit: cover; border: 1px solid var(--border); margin-bottom: 20px; display: none; }
+        label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; }
+        input, select, textarea { width: 100%; background: #000000; border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: white; font-family: inherit; box-sizing: border-box; }
+        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; }
+        #preview-img-ui { width: 100%; height: 200px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -50,8 +50,8 @@
                 <div class="form-group"><label>Subject Name</label><input type="text" id="subj-name"></div>
                 <div class="form-group"><label>City</label><input type="text" id="subj-city"></div>
                 <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Start</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>End</label><input type="date" id="date-end"></div>
+                    <div class="form-group" style="flex:1;"><label>Start Date</label><input type="date" id="date-start"></div>
+                    <div class="form-group" style="flex:1;"><label>End Date</label><input type="date" id="date-end"></div>
                 </div>
                 <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
                 <button type="button" class="btn-main" onclick="handleProcess()">SUBMIT & CHECK</button>
@@ -59,8 +59,7 @@
         </div>
     </div>
 <script>
-    // --- UPDATE THIS URL AFTER RENDER GIVES YOU A LINK ---
-    const API_BASE = "https://your-app-name.onrender.com"; 
+    const API_BASE = "https://checkmate-5doe.onrender.com"; 
 
     let currentFile = null;
     async function initAI() {
@@ -70,7 +69,7 @@
             await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
             document.getElementById('status-dot').className = "dot online";
             document.getElementById('status-text').innerText = "DATABASE ACTIVE";
-        } catch (e) { document.getElementById('status-text').innerText = "SERVER CONNECTION ERROR"; }
+        } catch (e) { document.getElementById('status-text').innerText = "OFFLINE"; }
     }
     document.getElementById('file-input').onchange = (e) => {
         currentFile = e.target.files[0];
@@ -85,10 +84,12 @@
     async function handleProcess() {
         const name = document.getElementById('subj-name').value;
         const city = document.getElementById('subj-city').value;
-        if(!currentFile || !name) return alert("Required fields missing.");
+        if(!currentFile || !name) return alert("Please upload a photo and enter a name.");
+        
         const rawImg = await faceapi.bufferToImage(currentFile);
         const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-        if (!result) return alert("No face detected.");
+        if (!result) return alert("No face detected. Try a different angle.");
+        
         const payload = {
             descriptor: Array.from(result.descriptor),
             name: name, city: city,
