@@ -18,10 +18,14 @@ SIGHTENGINE_SECRET = os.environ.get("SIGHTENGINE_SECRET")
 client = MongoClient(MONGO_URI)
 db = client.checkmate_db
 subjects_col = db.subjects
-watchers_col = db.watchers
 
 def calculate_distance(desc1, desc2):
-    return np.linalg.norm(np.array(desc1) - np.array(desc2))
+    # Converts lists to numpy arrays and ensures they are the same size
+    d1 = np.array(desc1)
+    d2 = np.array(desc2)
+    if d1.shape != d2.shape:
+        return 999.0  # Force no-match if shapes differ (handles old data)
+    return np.linalg.norm(d1 - d2)
 
 @app.route('/')
 def serve_index(): return send_from_directory(app.static_folder, 'index.html')
@@ -34,18 +38,18 @@ def serve_results(): return send_from_directory(app.static_folder, 'results.html
 
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
-    data = request.json
-    image_b64 = data.get("image_data")
-    
-    if not image_b64:
-        return jsonify({"error": "No image data"}), 400
-
     try:
-        # 1. Clean Base64
-        header, encoded = image_b64.split(",", 1) if "," in image_b64 else (None, image_b64)
+        data = request.json
+        image_b64 = data.get("image_data")
+        
+        if "," in image_b64:
+            encoded = image_b64.split(",")[1]
+        else:
+            encoded = image_b64
+        
         image_bytes = base64.b64decode(encoded)
 
-        # 2. Call Sightengine
+        # Sightengine API Call
         files = { 'media': ('image.jpg', image_bytes, 'image/jpeg') }
         params = {
             'api_user': SIGHTENGINE_USER,
@@ -56,24 +60,23 @@ def submit_and_check():
         r = requests.post('https://api.sightengine.com/1.0/check.json', files=files, data=params)
         output = r.json()
 
-        if output.get('status') == 'failure' or not output.get('faces'):
-            return jsonify({"status": "no_face", "message": "No face detected."}), 200
+        if output.get('status') != 'success' or not output.get('faces'):
+            return jsonify({"status": "no_face", "message": "No face detected"}), 200
 
-        # 3. FIX: Mapping to Sightengine's specific JSON structure
-        face = output['faces'][0]
-        feats = face['features']
-        
-        # We extract 6 specific coordinates to create a unique facial ID
+        # Extracting 10 landmarks for a more unique fingerprint
+        f = output['faces'][0]['features']
         new_descriptor = [
-            feats['left_eye']['x'], feats['left_eye']['y'],
-            feats['right_eye']['x'], feats['right_eye']['y'],
-            feats['nose_tip']['x'], feats['nose_tip']['y']
+            f['left_eye']['x'], f['left_eye']['y'],
+            f['right_eye']['x'], f['right_eye']['y'],
+            f['nose_tip']['x'], f['nose_tip']['y'],
+            f['left_mouth_corner']['x'], f['left_mouth_corner']['y'],
+            f['right_mouth_corner']['x'], f['right_mouth_corner']['y']
         ]
 
-        # 4. Search for matches
+        # Match Logic
         all_subjects = list(subjects_col.find({}))
         match_found = None
-        threshold = 0.08 # Adjusted for landmark precision
+        threshold = 0.12 # Landmark sensitivity
 
         for subject in all_subjects:
             dist = calculate_distance(new_descriptor, subject['descriptor'])
@@ -82,11 +85,11 @@ def submit_and_check():
                 break
 
         current_sighting = {
-            "city": data.get("city"),
-            "date": data.get("date_context"),
+            "city": data.get("city") or "Unknown",
+            "date": data.get("date_context") or "Unknown",
             "submitted_on": datetime.now().strftime("%b %d, %Y"),
             "text": data.get("review_text", ""),
-            "image": image_b64, # Keep full b64 for display
+            "image": image_b64,
             "submitter": data.get("submitter_email", "anonymous")
         }
 
@@ -94,29 +97,24 @@ def submit_and_check():
             subjects_col.update_one({"_id": match_found["_id"]}, {"$push": {"observations": current_sighting}})
             return jsonify({
                 "status": "match", 
-                "observations": match_found["observations"] + [current_sighting]
+                "observations": match_found["observations"] + [current_sighting],
+                "user_query": {"name": match_found["name"]}
             })
         else:
             subjects_col.insert_one({
-                "name": data.get("name"),
+                "name": data.get("name") or "Unnamed Subject",
                 "descriptor": new_descriptor,
                 "observations": [current_sighting]
             })
-            return jsonify({"status": "no_match", "observations": [current_sighting]})
+            return jsonify({
+                "status": "no_match", 
+                "observations": [current_sighting],
+                "user_query": {"name": data.get("name") or "Unnamed Subject"}
+            })
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Server Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-@app.route('/add-to-watchlist', methods=['POST'])
-def add_to_watchlist():
-    data = request.json
-    watchers_col.update_one(
-        {"email": data.get("email")},
-        {"$addToSet": {"watching_names": data.get("subject_name")}, "$set": {"notify_by_email": True}},
-        upsert=True
-    )
-    return jsonify({"status": "success"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
