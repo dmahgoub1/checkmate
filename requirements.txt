@@ -1,8 +1,5 @@
 flask
 flask-cors
 pymongo
+requests
 numpy
-Pillow
-cmake
---find-links https://wheels.galaxyproject.org/ dlib
-face-recognition
