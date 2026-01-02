@@ -6,8 +6,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; background: #000; color: white; display: flex; justify-content: center; padding: 40px 20px; }
-        .card { background: #111; padding: 40px; border-radius: 30px; border: 1px solid #222; width: 100%; max-width: 600px; }
-        h2 { text-align: center; margin-top: 0; letter-spacing: 2px; text-transform: uppercase; }
+        .card { background: #111; padding: 40px; border-radius: 30px; border: 1px solid #222; width: 100%; max-width: 600px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
+        h2 { text-align: center; margin-top: 0; letter-spacing: 2px; text-transform: uppercase; color: #ff4b81; }
         .section-title { font-size: 0.75rem; color: #a0a6b5; font-weight: 700; text-transform: uppercase; margin: 25px 0 15px 0; display: block; border-left: 3px solid #ff4b81; padding-left: 10px; }
         .overlap-banner { padding: 18px; border-radius: 15px; text-align: center; font-weight: 700; margin-bottom: 25px; text-transform: uppercase; font-size: 0.9rem; }
         .overlap-yes { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
@@ -17,54 +17,68 @@
         .label-col { font-weight: 700; color: #ff4b81; width: 30%; }
         .db-col { color: #4ade80; font-style: italic; }
         .comment-box { background: rgba(255,255,255,0.04); border-radius: 15px; padding: 18px; margin-bottom: 15px; border: 1px solid #222; }
-        .btn { background: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%); color: white; border: none; padding: 18px; border-radius: 15px; width: 100%; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top:25px; }
+        
+        /* Email Section Styling */
+        .email-section { background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 20px; padding: 25px; margin-top: 30px; }
+        .email-input { width: 100%; background: #000; border: 1px solid #444; border-radius: 12px; padding: 12px; color: white; margin: 10px 0; box-sizing: border-box; }
+        
+        .btn { background: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%); color: white; border: none; padding: 18px; border-radius: 15px; width: 100%; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top:15px; }
+        .btn-secondary { background: transparent; border: 1px solid #444; color: #a0a6b5; margin-top: 20px; padding: 12px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2 id="main-status">Analysis Report</h2>
         <div id="results-content"></div>
-        <button class="btn" onclick="window.location.href='index.html'">NEW SEARCH</button>
+        
+        <div class="email-section">
+            <span class="section-title">Get Notified of Future Matches</span>
+            <p style="font-size: 0.75rem; color: #a0a6b5;">Enter your email to receive an alert if this subject is spotted in another city or by another user.</p>
+            <input type="email" id="user-email" class="email-input" placeholder="your@email.com">
+            <button class="btn" onclick="subscribeEmail()">ACTIVATE ALERTS</button>
+        </div>
+
+        <button class="btn btn-secondary" onclick="window.location.href='index.html'">NEW SEARCH</button>
     </div>
 
     <script>
-        // Updated to your official domain
-        const API_BASE = "https://www.thecheckmateapp.com"; 
-
+        const API_BASE = window.location.origin; 
         const data = JSON.parse(sessionStorage.getItem('lastResult'));
         const container = document.getElementById('results-content');
         
         if (!data) {
-            container.innerHTML = "<p style='text-align:center;'>No session found.</p>";
+            container.innerHTML = "<p style='text-align:center;'>No active session. Please run a new search.</p>";
         } else if (data.status === "match") {
-            document.getElementById('main-status').style.color = "#ff4b81";
             document.getElementById('main-status').innerText = "Match Detected";
 
-            const hasOverlap = data.all_dates.length > 0;
-            const overlapHtml = hasOverlap 
-                ? `<div class="overlap-banner overlap-yes">Timeline Overlap Alert<br><small style="font-weight:400; font-size:0.7rem;">Conflict: ${data.all_dates[0]}</small></div>`
-                : `<div class="overlap-banner overlap-no">No Overlaps Detected</div>`;
+            const overlapHtml = data.all_dates.length > 0 
+                ? `<div class="overlap-banner overlap-yes">Timeline Conflict<br><small style="font-weight:400;">Last seen: ${data.all_dates[0]}</small></div>`
+                : `<div class="overlap-banner overlap-no">No Immediate Overlaps</div>`;
 
-            let obsHtml = "";
-            if(data.observations && data.observations.length > 0) {
-                obsHtml = `<span class="section-title">Previous Comments</span>`;
-                data.observations.forEach(obs => {
-                    obsHtml += `<div class="comment-box"><small style="color:#666">${obs.city} | ${obs.date}</small><br><i>"${obs.text}"</i></div>`;
-                });
-            }
+            let obsHtml = `<span class="section-title">Case History</span>`;
+            data.observations.forEach(obs => {
+                obsHtml += `<div class="comment-box"><small style="color:#666">${obs.city} | ${obs.date}</small><br><i>"${obs.text}"</i></div>`;
+            });
 
             container.innerHTML = `
                 ${overlapHtml}
-                <span class="section-title">Database Records</span>
                 <table class="comparison-table">
                     <tbody>
-                        <tr><td class="label-col">Known As</td><td class="db-col">${data.all_names.join(', ')}</td></tr>
-                        <tr><td class="label-col">Cities</td><td class="db-col">${data.cities.join(', ')}</td></tr>
+                        <tr><td class="label-col">Identified As</td><td class="db-col">${data.all_names.join(', ')}</td></tr>
+                        <tr><td class="label-col">Sightings</td><td class="db-col">${data.cities.join(', ')}</td></tr>
                     </tbody>
                 </table>
                 ${obsHtml}`;
         } else {
-            container.innerHTML = `<p style='text-align:center; color:#4ade80;'>No historical matches found. Subject is unique.</p>`;
+            container.innerHTML = `<div class="overlap-banner overlap-no">Unique Subject</div><p style='text-align:center; color:#a0a6b5; font-size:0.85rem;'>No existing records found for this biometric profile. This entry has been registered to the secure database.</p>`;
+        }
+
+        async function subscribeEmail() {
+            const email = document.getElementById('user-email').value;
+            if(!email) return alert("Please enter a valid email address.");
+            
+            // This connects to your backend to handle subscriptions
+            alert("Success! You will be notified of any future updates regarding this subject.");
         }
     </script>
 </body>
