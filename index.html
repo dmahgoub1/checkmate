@@ -59,6 +59,7 @@
         </div>
     </div>
 <script>
+    // THE UPDATED ADDRESS
     const API_BASE = "https://checkmate-5doe.onrender.com"; 
 
     let currentFile = null;
@@ -69,7 +70,10 @@
             await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
             document.getElementById('status-dot').className = "dot online";
             document.getElementById('status-text').innerText = "DATABASE ACTIVE";
-        } catch (e) { document.getElementById('status-text').innerText = "OFFLINE"; }
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('status-text').innerText = "OFFLINE"; 
+        }
     }
     document.getElementById('file-input').onchange = (e) => {
         currentFile = e.target.files[0];
@@ -88,7 +92,7 @@
         
         const rawImg = await faceapi.bufferToImage(currentFile);
         const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-        if (!result) return alert("No face detected. Try a different angle.");
+        if (!result) return alert("No face detected.");
         
         const payload = {
             descriptor: Array.from(result.descriptor),
