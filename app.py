@@ -22,8 +22,7 @@ subjects_col = db.subjects
 def calculate_distance(desc1, desc2):
     d1 = np.array(desc1)
     d2 = np.array(desc2)
-    if d1.shape != d2.shape:
-        return 999.0
+    if d1.shape != d2.shape: return 999.0
     return np.linalg.norm(d1 - d2)
 
 @app.route('/')
@@ -72,15 +71,16 @@ def submit_and_check():
 
         all_subjects = list(subjects_col.find({}))
         match_found = None
-        # THRESHOLD UPDATED: 0.25 is more lenient for matches
         threshold = 0.25 
 
         for subject in all_subjects:
             dist = calculate_distance(new_descriptor, subject['descriptor'])
-            print(f"Distance to {subject['name']}: {dist}") # Check Render logs for this!
             if dist < threshold:
                 match_found = subject
                 break
+
+        # Explicitly handling the submitter info
+        submitter = data.get("submitter_email", "anonymous")
 
         current_sighting = {
             "city": data.get("city") or "Unknown",
@@ -88,7 +88,7 @@ def submit_and_check():
             "submitted_on": datetime.now().strftime("%b %d, %Y"),
             "text": data.get("review_text", ""),
             "image": image_b64,
-            "submitter": data.get("submitter_email", "anonymous")
+            "submitter": submitter
         }
 
         if match_found:
@@ -111,7 +111,6 @@ def submit_and_check():
             })
 
     except Exception as e:
-        print(f"Server Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

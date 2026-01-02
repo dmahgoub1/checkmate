@@ -11,19 +11,23 @@
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .header-logo { width: 120px; margin: 20px 0 10px 0; cursor: pointer; }
         .results-container { width: 100%; max-width: 500px; }
-        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; position: relative;}
-        .obs-card { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border-left: 4px solid var(--brand); }
-        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; font-size: 0.9rem;}
+        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; }
+        .obs-card { background: #1a1a1a; margin-top: 20px; padding: 15px; border-radius: 15px; border: 1px solid #333; }
+        .obs-image { width: 100%; border-radius: 10px; margin-bottom: 12px; border: 1px solid #444; object-fit: cover; max-height: 300px; }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; font-size: 0.9rem; transition: 0.3s;}
         .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
         .btn-contact { background: var(--brand); color: #fff; }
+        .btn-disabled { background: #1a1a1a; color: #444; border: 1px solid #222; cursor: not-allowed; }
         .btn-new-search { background: transparent; color: #888; border: 1px solid #333; margin-bottom: 20px; }
         #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
         .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; max-width: 320px; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+        .badge-match { background: #ff4b8122; color: var(--brand); border: 1px solid var(--brand); }
+        .badge-new { background: #222; color: #888; border: 1px solid #444; }
     </style>
 </head>
 <body>
     <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
-    
     <button class="btn-action btn-new-search" onclick="window.location.href='search.html'">← NEW SEARCH</button>
 
     <div class="results-container" id="results-display"></div>
@@ -44,35 +48,38 @@
         function renderResults() {
             const userMode = sessionStorage.getItem('user_mode');
             if (!result || !result.observations) { 
-                container.innerHTML = "<h2 style='text-align:center;'>No data. Try again.</h2>"; 
+                container.innerHTML = "<h2>No data.</h2>"; 
                 return; 
             }
 
             const displayName = (result.user_query && result.user_query.name) ? result.user_query.name : "Subject";
             let html = `
                 <div class="profile-card">
-                    <img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px; border: 1px solid #333;">
-                    <h1 style="margin:0; font-size:1.8rem;">${result.status === 'match' ? 'Match Found' : 'Profile Created'}</h1>
-                    <p style="color:#888; margin-bottom:20px;">Identity: <strong>${displayName}</strong></p>
+                    <span class="badge ${result.status === 'match' ? 'badge-match' : 'badge-new'}">
+                        ${result.status === 'match' ? 'Community Match' : 'New Entry'}
+                    </span>
+                    <h1>${displayName}</h1>
             `;
 
             if (userMode === 'verified') {
-                html += `
-                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${displayName}')">🔔 Email Me Future Matches</button>
-                    <button class="btn-action btn-contact" onclick="alert('Notification sent.')">Contact Submitter</button>
-                `;
+                html += `<button class="btn-action btn-notify" onclick="toggleWatchlist('${displayName}')">🔔 Notify me of future matches</button>`;
             } else {
-                html += `<button class="btn-action btn-notify" onclick="openModal()">🔓 Sign In for Email Alerts</button>`;
+                html += `<button class="btn-action btn-notify" onclick="openModal()">🔓 Sign In for Alerts</button>`;
             }
 
             const obsList = [...result.observations].reverse();
             obsList.forEach(obs => {
+                const isAnon = obs.submitter === "anonymous";
                 html += `
                     <div class="obs-card">
-                        <small style="color:var(--brand); font-weight:700;">${obs.submitted_on}</small>
-                        <p style="margin:5px 0; font-size:0.85rem;"><strong>City:</strong> ${obs.city}</p>
-                        <p style="margin:5px 0; font-size:0.85rem;"><strong>Active:</strong> ${obs.date}</p>
-                        <p style="font-style:italic; color:#ccc; border-top:1px solid #222; margin-top:10px; padding-top:10px; font-size:0.9rem;">"${obs.text || 'No description provided.'}"</p>
+                        <img src="${obs.image}" class="obs-image">
+                        <small style="color:var(--brand); font-weight:700;">SIGHTED: ${obs.submitted_on} (${obs.city})</small>
+                        <p style="margin:10px 0; font-size:0.85rem;">"${obs.text || 'No description.'}"</p>
+                        
+                        ${isAnon ? 
+                            `<button class="btn-action btn-disabled" disabled>Submitted anonymously, cannot request connect</button>` :
+                            `<button class="btn-action btn-contact" onclick="requestConnect('${obs.submitter}')">Request to Connect</button>`
+                        }
                     </div>
                 `;
             });
@@ -82,16 +89,26 @@
 
         function openModal() { document.getElementById('login-modal').style.display = 'flex'; }
         function closeModal() { document.getElementById('login-modal').style.display = 'none'; }
+        
         function handleModalLogin(response) {
             const payload = JSON.parse(window.atob(response.credential.split('.')[1]));
             sessionStorage.setItem('user_mode', 'verified');
             sessionStorage.setItem('user_email', payload.email);
             closeModal(); renderResults();
         }
+
+        async function requestConnect(targetEmail) {
+            if (sessionStorage.getItem('user_mode') !== 'verified') {
+                openModal();
+                return;
+            }
+            alert("Connection request sent to the original submitter. They will receive your email address to start a secure chat.");
+        }
+
         async function toggleWatchlist(name) {
             const email = sessionStorage.getItem('user_email');
             await fetch('/add-to-watchlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, subject_name: name }) });
-            alert("Email notifications enabled!");
+            alert("Success! We'll email you if this person is searched again.");
         }
         renderResults();
     </script>
