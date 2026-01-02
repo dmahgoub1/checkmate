@@ -10,7 +10,8 @@
         :root { --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%); }
         body { font-family: 'Poppins', sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        /* User Profile Header */
+        .header-logo { width: 120px; margin: 20px 0 30px 0; cursor: pointer; }
+
         .user-bar { width: 100%; max-width: 500px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.8rem; color: #a0a6b5; }
         .user-info { display: flex; align-items: center; gap: 10px; }
         .user-pic { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #333; }
@@ -18,14 +19,22 @@
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4b4b; display: inline-block; margin-right: 5px; }
         .status-active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
 
-        .container { width: 100%; max-width: 500px; background: #111; padding: 25px; border-radius: 25px; border: 1px solid #222; }
-        input, textarea { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 18px; border-radius: 15px; border: none; background: var(--brand-gradient); color: #fff; font-weight: 700; cursor: pointer; margin-top: 15px; }
-        #video-container { width: 100%; height: 300px; background: #000; border-radius: 15px; margin-bottom: 15px; overflow: hidden; position: relative; border: 1px solid #333; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        .container { width: 100%; max-width: 500px; background: #111; padding: 25px; border-radius: 25px; border: 1px solid #222; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; font-family: inherit; }
+        
+        .file-label { display: block; text-align: center; padding: 12px; background: #1a1a1a; border: 1px dashed #444; border-radius: 12px; cursor: pointer; margin-bottom: 15px; font-size: 0.85rem; color: #a0a6b5; }
+        #file-upload { display: none; }
+
+        button { width: 100%; padding: 18px; border-radius: 15px; border: none; background: var(--brand-gradient); color: #fff; font-weight: 700; cursor: pointer; margin-top: 15px; font-size: 1rem; letter-spacing: 1px; }
+        
+        #video-container { width: 100%; height: 280px; background: #000; border-radius: 15px; margin-bottom: 15px; overflow: hidden; position: relative; border: 1px solid #333; }
+        video, #image-preview { width: 100%; height: 100%; object-fit: cover; }
+        #image-preview { display: none; }
     </style>
 </head>
 <body>
+
+    <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
 
     <div class="user-bar">
         <div class="user-info">
@@ -38,18 +47,23 @@
     <div class="container">
         <div id="video-container">
             <video id="video" autoplay muted playsinline></video>
+            <img id="image-preview" alt="Preview">
         </div>
         
+        <label for="file-upload" class="file-label" id="file-label-text">
+            Click to upload a photo instead of camera
+        </label>
+        <input type="file" id="file-upload" accept="image/*">
+
         <input type="text" id="subject-name" placeholder="Person's Name">
         <input type="text" id="city" placeholder="City / Location">
         <input type="text" id="date-context" placeholder="Dating Period (e.g. 2024-2025)">
         <textarea id="review" placeholder="Additional details (Optional)"></textarea>
         
-        <button id="search-btn">SCAN & VERIFY</button>
+        <button id="search-btn">SEARCH</button>
     </div>
 
     <script>
-        // Setup User Display
         const userMode = sessionStorage.getItem('user_mode');
         const userName = sessionStorage.getItem('user_name') || 'Guest';
         const userPic = sessionStorage.getItem('user_pic');
@@ -61,27 +75,52 @@
             img.style.display = 'block';
         }
 
-        // AI Logic
         const video = document.getElementById('video');
+        const imagePreview = document.getElementById('image-preview');
+        const fileUpload = document.getElementById('file-upload');
         const statusText = document.getElementById('status-text');
         const dot = document.getElementById('dot');
+        let useUploadedFile = false;
 
         async function startApp() {
-            await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
-            await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-            await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-            
-            navigator.mediaDevices.getUserMedia({ video: {} })
-                .then(stream => { 
-                    video.srcObject = stream;
-                    dot.classList.add('status-active');
-                    statusText.innerText = "SECURE CLOUD ACTIVE";
-                });
+            try {
+                await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
+                await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+                await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+                
+                navigator.mediaDevices.getUserMedia({ video: {} })
+                    .then(stream => { 
+                        video.srcObject = stream;
+                        dot.classList.add('status-active');
+                        statusText.innerText = "SECURE CLOUD ACTIVE";
+                    }).catch(() => {
+                        statusText.innerText = "CAMERA BLOCKED - USE UPLOAD";
+                    });
+            } catch (e) {
+                statusText.innerText = "AI MODEL ERROR";
+            }
         }
 
+        fileUpload.onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = f => {
+                    imagePreview.src = f.target.result;
+                    imagePreview.style.display = 'block';
+                    video.style.display = 'none';
+                    useUploadedFile = true;
+                    document.getElementById('file-label-text').innerText = "Photo selected: " + file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
         document.getElementById('search-btn').onclick = async () => {
-            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-            if (!detection) return alert("No face detected. Please adjust lighting.");
+            const inputElement = useUploadedFile ? imagePreview : video;
+            const detection = await faceapi.detectSingleFace(inputElement).withFaceLandmarks().withFaceDescriptor();
+            
+            if (!detection) return alert("No face detected. Please ensure the person's face is clear.");
 
             const payload = {
                 name: document.getElementById('subject-name').value,
@@ -89,9 +128,11 @@
                 date_context: document.getElementById('date-context').value,
                 review_text: document.getElementById('review').value,
                 descriptor: Array.from(detection.descriptor),
-                image_data: captureImage(),
+                image_data: useUploadedFile ? imagePreview.src : captureImage(),
                 submitter_email: sessionStorage.getItem('user_email') || 'anonymous'
             };
+
+            statusText.innerText = "SEARCHING DATABASE...";
 
             const resp = await fetch('/submit-and-check', {
                 method: 'POST',
@@ -100,7 +141,6 @@
             });
 
             const result = await resp.json();
-            // Store query name for the contact feature logic
             result.user_query = { name: payload.name };
             sessionStorage.setItem('lastResult', JSON.stringify(result));
             window.location.href = 'results.html';

@@ -8,22 +8,27 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; --card: #111; }
-        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; }
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .header-logo { width: 120px; margin: 20px 0 30px 0; cursor: pointer; }
+
+        .results-container { width: 100%; max-width: 500px; }
         .match-header { text-align: center; margin-bottom: 30px; }
-        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; max-width: 500px; margin: 0 auto 20px; }
+        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; box-sizing: border-box; }
         .obs-card { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border-left: 4px solid var(--brand); }
-        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.3s; font-family: inherit; }
         .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
         .btn-contact { background: var(--brand); color: #fff; }
         
-        /* Login Modal for Guests */
         #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
         .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; max-width: 350px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="results-container"></div>
+    <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
+
+    <div class="results-container" id="results-display"></div>
 
     <div id="login-modal">
         <div class="modal-content">
@@ -38,41 +43,41 @@
     <script>
         const result = JSON.parse(sessionStorage.getItem('lastResult'));
         const userMode = sessionStorage.getItem('user_mode');
-        const container = document.getElementById('results-container');
+        const container = document.getElementById('results-display');
 
         if (!result) {
-            container.innerHTML = "<h2>No search data found.</h2>";
+            container.innerHTML = "<h2 style='text-align:center;'>No search data found.</h2>";
         } else {
             let html = `
                 <div class="match-header">
-                    <h1>${result.status === 'match' ? 'Match Found' : 'First Entry Created'}</h1>
-                    <p>${result.status === 'match' ? 'This person has been seen before.' : 'A new profile has been started.'}</p>
+                    <h1>${result.status === 'match' ? 'Match Found' : 'Initial Entry Created'}</h1>
+                    <p style="color: #a0a6b5;">${result.status === 'match' ? 'This individual has a recorded history.' : 'This is the first record for this person.'}</p>
                 </div>
                 <div class="profile-card">
-                    <img src="${result.observations[0].image}" style="width:100%; border-radius:15px; margin-bottom:15px;">
-                    <h3>Observations for ${result.user_query.name}</h3>
+                    <img src="${result.observations[0].image}" style="width:100%; border-radius:15px; margin-bottom:15px; border: 1px solid #333;">
+                    <h3 style="margin-top:0;">Observations for ${result.user_query.name}</h3>
             `;
 
-            // Feature Buttons (Conditional)
             if (userMode === 'verified') {
                 html += `
-                    <button class="btn-action btn-notify" onclick="toggleWatchlist()">🔔 Notify me of future matches</button>
-                    <button class="btn-action btn-contact" onclick="openContact()">Reach out to submitters</button>
+                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Notify me of future matches</button>
+                    <button class="btn-action btn-contact" onclick="alert('Contact feature initializing...')">Reach out to submitters</button>
                 `;
             } else {
                 html += `
                     <button class="btn-action btn-notify" onclick="showLoginModal()">🔔 Get future alerts for this person</button>
-                    <button class="btn-action btn-contact" style="opacity:0.5" onclick="showLoginModal()">Contact Submitter (Login Required)</button>
+                    <button class="btn-action btn-contact" style="opacity:0.6" onclick="showLoginModal()">Contact Submitter (Login Required)</button>
                 `;
             }
 
-            result.observations.forEach(obs => {
+            const observations = [...result.observations].reverse();
+            observations.forEach(obs => {
                 html += `
                     <div class="obs-card">
-                        <small style="color:var(--brand)">${obs.submitted_on}</small>
-                        <p><strong>Location:</strong> ${obs.city}</p>
-                        <p><strong>Context:</strong> ${obs.date}</p>
-                        <p style="font-style:italic">"${obs.text}"</p>
+                        <small style="color:var(--brand); font-weight:700; text-transform:uppercase;">Recorded: ${obs.submitted_on}</small>
+                        <p style="margin: 10px 0 5px 0;"><strong>Location:</strong> ${obs.city}</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Context:</strong> ${obs.date}</p>
+                        <p style="font-style:italic; color:#ccc; border-top: 1px solid #333; padding-top:10px;">"${obs.text || 'No comments provided.'}"</p>
                     </div>
                 `;
             });
@@ -85,16 +90,28 @@
         function closeModal() { document.getElementById('login-modal').style.display = 'none'; }
 
         function handleModalLogin(response) {
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            const base64Url = response.credential.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(window.atob(base64));
+            
             sessionStorage.setItem('user_mode', 'verified');
             sessionStorage.setItem('user_email', payload.email);
             sessionStorage.setItem('user_name', payload.name);
-            location.reload(); // Refresh to unlock the features
+            location.reload(); 
         }
 
-        function toggleWatchlist() {
-            alert("Success! You will be notified via " + sessionStorage.getItem('user_email') + " if this person is uploaded again.");
-            // In the next step, we can make this save to your 'watchers' collection in MongoDB
+        async function toggleWatchlist(name) {
+            const email = sessionStorage.getItem('user_email');
+            try {
+                const resp = await fetch('/add-to-watchlist', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: email, subject_name: name })
+                });
+                if(resp.ok) alert("Watchlist active! You will be notified of future matches for " + name);
+            } catch (e) {
+                alert("Could not update watchlist.");
+            }
         }
     </script>
 </body>
