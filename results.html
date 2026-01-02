@@ -16,80 +16,54 @@
         .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
         .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
         .btn-contact { background: var(--brand); color: #fff; }
-        #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:1000; align-items:center; justify-content:center; }
-        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; }
+        #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
+        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; max-width: 320px; }
     </style>
 </head>
 <body>
-
     <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
-
     <div class="results-container" id="results-display"></div>
-
     <div id="login-modal">
         <div class="modal-content">
-            <h3>Login Required</h3>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Please verify your account to receive email alerts or contact submitters.</p>
-            <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleModalLogin"></div>
+            <h3>Sign In to Proceed</h3>
+            <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleModalLogin" data-auto_prompt="false"></div>
             <div class="g_id_signin" data-type="standard"></div>
+            <button onclick="closeModal()" style="background:none; border:none; color:#555; margin-top:20px; cursor:pointer;">Cancel</button>
         </div>
     </div>
-
     <script>
         const result = JSON.parse(sessionStorage.getItem('lastResult'));
-        const userMode = sessionStorage.getItem('user_mode');
         const container = document.getElementById('results-display');
 
-        if (result) {
-            let html = `
-                <div style="text-align:center; margin-bottom:20px;">
-                    <h1>${result.status === 'match' ? 'Match Found' : 'First Entry Created'}</h1>
-                </div>
-                <div class="profile-card">
-                    <img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px;">
-                    <h3>Observations for ${result.user_query.name}</h3>
-            `;
-
+        function renderResults() {
+            const userMode = sessionStorage.getItem('user_mode');
+            if (!result) { container.innerHTML = "<h2>No data.</h2>"; return; }
+            let html = `<div class="profile-card"><img src="${result.observations[result.observations.length - 1].image}" style="width:100%; border-radius:15px; margin-bottom:15px;"><h3>Records for ${result.user_query.name}</h3>`;
             if (userMode === 'verified') {
-                html += `
-                    <button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Email Me Future Matches</button>
-                    <button class="btn-action btn-contact" onclick="alert('Submitter notified via Checkmate secure mail.')">Contact Previous Submitter</button>
-                `;
+                html += `<button class="btn-action btn-notify" onclick="toggleWatchlist('${result.user_query.name}')">🔔 Email Me Future Matches</button><button class="btn-action btn-contact">Contact Submitter</button>`;
             } else {
-                html += `
-                    <button class="btn-action btn-notify" onclick="document.getElementById('login-modal').style.display='flex'">🔔 Get Email Alerts</button>
-                `;
+                html += `<button class="btn-action btn-notify" onclick="openModal()">🔓 Sign In for Email Alerts</button>`;
             }
-
-            result.observations.reverse().forEach(obs => {
-                html += `
-                    <div class="obs-card">
-                        <small style="color:var(--brand);">RECORDED: ${obs.submitted_on}</small>
-                        <p><strong>Location:</strong> ${obs.city}</p>
-                        <p><strong>Dates:</strong> ${obs.date}</p>
-                        <p style="font-style:italic;">"${obs.text || 'No comment provided.'}"</p>
-                    </div>
-                `;
+            [...result.observations].reverse().forEach(obs => {
+                html += `<div class="obs-card"><small>${obs.submitted_on}</small><p><strong>City:</strong> ${obs.city}</p><p><strong>Active:</strong> ${obs.date}</p><p>"${obs.text || 'No details.'}"</p></div>`;
             });
             container.innerHTML = html + "</div>";
         }
 
-        async function toggleWatchlist(name) {
-            const email = sessionStorage.getItem('user_email');
-            const resp = await fetch('/add-to-watchlist', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ email: email, subject_name: name, notify_by_email: true })
-            });
-            if(resp.ok) alert("Watchlist active! You will receive email alerts for " + name);
-        }
-
+        function openModal() { document.getElementById('login-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('login-modal').style.display = 'none'; }
         function handleModalLogin(response) {
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            const payload = JSON.parse(window.atob(response.credential.split('.')[1]));
             sessionStorage.setItem('user_mode', 'verified');
             sessionStorage.setItem('user_email', payload.email);
-            location.reload();
+            closeModal(); renderResults();
         }
+        async function toggleWatchlist(name) {
+            const email = sessionStorage.getItem('user_email');
+            const resp = await fetch('/add-to-watchlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, subject_name: name }) });
+            if(resp.ok) alert("Notifications enabled!");
+        }
+        renderResults();
     </script>
 </body>
 </html>
