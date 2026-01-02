@@ -16,76 +16,120 @@
         .result-container { width: 100%; max-width: 550px; }
         
         .status-banner { padding: 15px; border-radius: 18px; text-align: center; font-weight: 700; margin-bottom: 25px; text-transform: uppercase;}
-        .match { background: var(--brand-gradient); }
-        .new { background: #333; }
+        .match { background: var(--brand-gradient); box-shadow: 0 10px 30px rgba(255, 75, 129, 0.2); }
+        .new { background: #333; border: 1px solid var(--border); }
 
         .notify-box { background: rgba(255,255,255,0.05); border: 1px dashed #444; padding: 20px; border-radius: 20px; margin-bottom: 30px; text-align: center; }
-        .notify-box input { width: 80%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #000; color: #fff; margin: 10px 0; }
+        .notify-box input { width: 85%; padding: 12px; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; margin: 10px 0; outline: none; }
+        .btn-subscribe { background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
 
         .history-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 20px; margin-bottom: 25px; }
         .history-card img { width: 100%; border-radius: 16px; margin-bottom: 20px; border: 1px solid #333; }
         
-        .meta-label { color: #a0a6b5; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
-        .meta-value { font-size: 0.95rem; margin-bottom: 15px; color: #eee; }
-        .timestamp { font-size: 0.75rem; color: #ff4b81; font-weight: 600; margin-bottom: 15px; display: block; }
+        .timestamp { font-size: 0.7rem; color: #ff4b81; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 12px; }
+        .meta-label { color: #a0a6b5; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+        .meta-value { font-size: 0.95rem; margin-bottom: 18px; color: #eee; }
 
         .btn-contact {
-            background: #fff; color: #000; border: none; padding: 12px; 
-            border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%;
-            margin-top: 10px; font-size: 0.85rem;
+            background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #333; padding: 14px; 
+            border-radius: 14px; font-weight: 600; cursor: pointer; width: 100%;
+            margin-top: 10px; font-size: 0.85rem; transition: 0.3s;
         }
+        .btn-contact:hover { background: #fff; color: #000; }
         
-        .btn-back { background: transparent; color: #fff; border: 1px solid #333; padding: 18px; border-radius: 18px; width: 100%; cursor: pointer; font-weight: 700; margin-top: 20px; }
+        /* Modal Overlay Styles */
+        #contact-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #111; padding: 30px; border-radius: 25px; width: 90%; max-width: 400px;
+            border: 1px solid #333; text-align: left;
+        }
+        .modal-content h3 { margin-top: 0; font-size: 1.1rem; }
+        .modal-content input, .modal-content textarea {
+            width: 100%; background: #000; border: 1px solid #333; color: #fff;
+            padding: 12px; border-radius: 10px; margin-top: 10px; box-sizing: border-box; font-family: inherit;
+        }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-send { background: var(--brand-gradient); border: none; color: #fff; padding: 12px; border-radius: 12px; flex: 2; font-weight: 700; cursor: pointer; }
+        .btn-cancel { background: #222; border: none; color: #fff; padding: 12px; border-radius: 12px; flex: 1; cursor: pointer; }
+
+        .btn-back { background: transparent; color: #a0a6b5; border: none; padding: 18px; width: 100%; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <div class="header" onclick="window.location.href='index.html'"><img src="logo.png"></div>
 
     <div class="result-container" id="content-area"></div>
+    <div class="result-container"><button class="btn-back" onclick="window.location.href='index.html'">← RETURN TO SEARCH</button></div>
 
-    <div class="result-container"><button class="btn-back" onclick="window.location.href='index.html'">START NEW SEARCH</button></div>
+    <div id="contact-modal">
+        <div class="modal-content">
+            <h3>Contact Submitter</h3>
+            <p style="font-size: 0.8rem; color: #a0a6b5;">Your email will be shared with the original poster so they can reply to you directly.</p>
+            <input type="email" id="modal-email" placeholder="Your email address">
+            <textarea id="modal-message" rows="4" placeholder="Why do you want to reach out?"></textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
+                <button class="btn-send" id="send-request-btn">SEND REQUEST</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const resultData = JSON.parse(sessionStorage.getItem('lastResult'));
         const area = document.getElementById('content-area');
+        const API_BASE = window.location.origin;
 
-        function handleContact() {
-            const email = prompt("Enter your email address so they can reply to you:");
-            if (email) {
-                alert("Request Sent! We have notified the original submitter. If they choose to connect, they will reach out to " + email);
-                // In future, this would fetch('/notify-submitter')
-            }
+        function openModal(name) {
+            document.getElementById('contact-modal').style.display = 'flex';
+            document.getElementById('send-request-btn').onclick = () => submitContactRequest(name);
+        }
+
+        function closeModal() {
+            document.getElementById('contact-modal').style.display = 'none';
+        }
+
+        async function submitContactRequest(subjectName) {
+            const email = document.getElementById('modal-email').value;
+            const message = document.getElementById('modal-message').value;
+
+            if (!email || !message) return alert("Please fill in both fields.");
+
+            try {
+                const resp = await fetch(API_BASE + '/notify-submitter', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ requester_email: email, subject_name: subjectName, message: message })
+                });
+                if (resp.ok) {
+                    alert("Message Sent! We have logged your request. The original submitter will be notified.");
+                    closeModal();
+                }
+            } catch (err) { alert("Error sending request."); }
         }
 
         if (resultData) {
             const banner = document.createElement('div');
             banner.className = `status-banner ${resultData.status === 'match' ? 'match' : 'new'}`;
-            banner.innerText = resultData.status === 'match' ? 'Database Match Found' : 'First Entry Recorded';
+            banner.innerText = resultData.status === 'match' ? 'Database Match Found' : 'Initial Record Created';
             area.appendChild(banner);
 
-            const notify = document.createElement('div');
-            notify.className = 'notify-box';
-            notify.innerHTML = `
-                <div style="font-weight:700;">STAY UPDATED</div>
-                <input type="email" id="user-email" placeholder="Your email...">
-                <button style="background:#fff; border:none; padding:8px 15px; border-radius:8px; font-weight:700; cursor:pointer;" onclick="alert('Subscription active!')">NOTIFY ME OF NEW MATCHES</button>
-            `;
-            area.appendChild(notify);
-
-            const history = [...resultData.observations].reverse();
-            history.forEach((sighting) => {
+            const observations = [...resultData.observations].reverse();
+            observations.forEach((sighting) => {
                 const card = document.createElement('div');
                 card.className = 'history-card';
                 card.innerHTML = `
+                    <span class="timestamp">Verification Date: ${sighting.submitted_on || 'Jan 02, 2026'}</span>
                     <img src="${sighting.image}">
-                    <span class="timestamp">RECORDED ON: ${sighting.submitted_on || 'January 02, 2026'}</span>
-                    <div class="meta-label">Location</div>
-                    <div class="meta-value">${sighting.city || 'Unknown'}</div>
-                    <div class="meta-label">Relationship Dates</div>
-                    <div class="meta-value">${sighting.date || 'Not specified'}</div>
-                    <div class="meta-label">Details</div>
-                    <div class="meta-value">${sighting.text || 'No comments.'}</div>
-                    <button class="btn-contact" onclick="handleContact()">CONTACT SUBMITTER</button>
+                    <div class="meta-label">Location Recorded</div>
+                    <div class="meta-value">${sighting.city || 'Not specified'}</div>
+                    <div class="meta-label">Dating Context</div>
+                    <div class="meta-value">${sighting.date || 'No dates provided'}</div>
+                    <div class="meta-label">Submitter Comments</div>
+                    <div class="meta-value">${sighting.text || 'No additional details.'}</div>
+                    <button class="btn-contact" onclick="openModal('${resultData.user_query.name}')">CONTACT SUBMITTER ANONYMOUSLY</button>
                 `;
                 area.appendChild(card);
             });
