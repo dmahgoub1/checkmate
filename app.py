@@ -1,14 +1,17 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import json
+from pymongo import MongoClient
 import os
 import numpy as np
 
-# This ensures the app knows it is serving from the root folder
 app = Flask(__name__, static_url_path='', static_folder='.')
 CORS(app)
 
-DB_FILE = 'database.json'
+# Connect to MongoDB
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client['checkmate_db']
+collection = db['subjects']
 
 @app.route('/')
 def serve_index():
@@ -30,23 +33,15 @@ def submit_and_check():
     data = request.json
     new_descriptor = np.array(data['descriptor'])
     
-    if not os.path.exists(DB_FILE):
-        with open(DB_FILE, 'w') as f:
-            json.dump([], f)
-            
-    with open(DB_FILE, 'r') as f:
-        try:
-            db = json.load(f)
-        except:
-            db = []
-    
     match_found = False
     threshold = 0.6 
     all_names, all_cities, all_dates, observations = [], [], [], []
 
-    for entry in db:
+    # Search MongoDB for matching faces
+    for entry in collection.find():
         old_descriptor = np.array(entry['descriptor'])
         dist = np.linalg.norm(new_descriptor - old_descriptor)
+        
         if dist < threshold:
             match_found = True
             if entry.get('name') not in all_names: all_names.append(entry.get('name'))
@@ -55,9 +50,8 @@ def submit_and_check():
             all_dates.append(dr)
             observations.append({"date": dr, "city": entry.get('city'), "text": entry.get('review_text')})
 
-    db.append(data)
-    with open(DB_FILE, 'w') as f:
-        json.dump(db, f, indent=4)
+    # Save the new entry to MongoDB
+    collection.insert_one(data)
 
     return jsonify({
         "status": "match" if match_found else "new",
