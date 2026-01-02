@@ -27,6 +27,25 @@
         .form-group { margin-bottom: 20px; text-align: left; }
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
         input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
+        
+        /* Premium Date Picker Styling */
+        input[type="date"] {
+            color-scheme: dark;
+            position: relative;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
+        }
+
         .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
         .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
@@ -52,12 +71,17 @@
             <div id="form-ui" style="margin-top: 25px;">
                 <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
                 <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
-                <div class="form-group"><label>When did you date this person?</label><input type="text" id="date-context" placeholder="e.g. Summer 2024"></div>
+                
                 <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Started</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>Ended</label><input type="date" id="date-end"></div>
+                    <div class="form-group" style="flex:1;"><label>Date Started</label><input type="date" id="date-start"></div>
+                    <div class="form-group" style="flex:1;"><label>Date Ended</label><input type="date" id="date-end"></div>
                 </div>
-                <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
+                
+                <div class="form-group">
+                    <label>Comments (optional)</label>
+                    <textarea id="obs-text" rows="3" placeholder="Add any details if you wish..."></textarea>
+                </div>
+                
                 <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">
                     <span id="btn-text">SEARCH</span>
                     <div class="spinner" id="btn-spinner"></div>
@@ -134,15 +158,19 @@
                 return;
             }
 
+            const startDate = document.getElementById('date-start').value;
+            const endDate = document.getElementById('date-end').value;
+            const formattedContext = (startDate || endDate) ? `${startDate} to ${endDate}` : "Date not specified";
+
             const payload = {
                 "descriptor": Array.from(result.descriptor),
                 "image_data": finalBase64, 
                 "name": document.getElementById('subj-name').value, 
                 "city": document.getElementById('subj-city').value,
-                "date_context": document.getElementById('date-context').value,
-                "start": document.getElementById('date-start').value,
-                "end": document.getElementById('date-end').value,
-                "review_text": document.getElementById('obs-text').value
+                "date_context": formattedContext,
+                "start": startDate,
+                "end": endDate,
+                "review_text": document.getElementById('obs-text').value || ""
             };
 
             const resp = await fetch(API_BASE + "/submit-and-check", {
