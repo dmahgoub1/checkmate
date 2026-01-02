@@ -3,175 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Checkmate App</title>
-    <link rel="icon" type="image/png" href="logo.png">
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <title>The Checkmate App - Welcome</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root {
             --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%);
-            --dark-bg: #000000; --card-bg: #111111; --text-light: #ffffff;
-            --text-dim: #a0a6b5; --border: #222222; --success: #4ade80; --error: #ef4444;
+            --dark-bg: #000; --card-bg: #111; --border: #222;
         }
-        body { font-family: 'Poppins', sans-serif; background-color: var(--dark-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        header { text-align: center; padding: 50px 20px 30px 20px; cursor: pointer; }
-        .main-logo { width: 140px; height: auto; display: block; margin: 0 auto; }
-        .tagline { color: var(--text-dim); font-size: 0.9rem; margin-top: 20px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
-        .app-container { width: 90%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 40px; }
-        .status-indicator { background: rgba(255,255,255,0.03); padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
-        .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .content { padding: 30px; }
-        #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.01); transition: 0.3s; }
-        #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
-        .form-group { margin-bottom: 20px; text-align: left; }
-        label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
-        input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
-        input[type="date"] { color-scheme: dark; position: relative; }
-        input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
-        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
-        .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Poppins', sans-serif; background: var(--dark-bg); color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+        .welcome-card { background: var(--card-bg); padding: 50px 30px; border-radius: 35px; border: 1px solid var(--border); width: 90%; max-width: 420px; box-shadow: 0 30px 60px rgba(0,0,0,0.6); }
+        .logo { width: 160px; margin-bottom: 25px; }
+        h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.5px; }
+        p { color: #a0a6b5; font-size: 0.9rem; margin-bottom: 35px; line-height: 1.6; padding: 0 10px; }
+        
+        /* Anonymous Button Style */
+        .btn-anon {
+            background: transparent; border: 1px solid #333; color: #fff; padding: 16px;
+            border-radius: 14px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 20px;
+            transition: 0.3s; font-size: 0.95rem;
+        }
+        .btn-anon:hover { background: #1a1a1a; border-color: #444; }
+        .divider { margin: 30px 0; color: #444; font-size: 0.7rem; letter-spacing: 3px; font-weight: 700; }
+        
+        /* Centering the Google Button */
+        #g_id_signin_wrapper { display: flex; justify-content: center; width: 100%; }
     </style>
 </head>
-<body onload="initAI()">
-    <header onclick="window.location.reload()">
-        <img src="logo.png" alt="Portal Logo" class="main-logo">
-        <div class="tagline">Verify Your Connections. Trust Your Heart.</div>
-    </header>
-    <div class="app-container">
-        <div class="status-indicator">
-            <div id="status-dot" class="dot"></div>
-            <span id="status-text">INITIALIZING...</span>
+<body>
+
+    <div class="welcome-card">
+        <img src="logo.png" alt="Checkmate" class="logo">
+        <h1>Verify with Confidence</h1>
+        <p>Join the community to track connections or proceed as a guest.</p>
+
+        <div id="g_id_onload"
+             data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
         </div>
-        <div class="content">
-            <div id="upload-zone" onclick="document.getElementById('file-input').click()">
-                <div id="upload-placeholder">📸<br>Tap to Upload Subject Photo</div>
-                <img id="preview-img-ui">
-                <input type="file" id="file-input" hidden accept="image/*">
-            </div>
-            <div id="form-ui" style="margin-top: 25px;">
-                <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
-                <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Date Started</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>Date Ended</label><input type="date" id="date-end"></div>
-                </div>
-                <div class="form-group"><label>Comments (optional)</label><textarea id="obs-text" rows="3" placeholder="Add any details..."></textarea></div>
-                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">
-                    <span id="btn-text">SEARCH</span>
-                    <div class="spinner" id="btn-spinner"></div>
-                </button>
-            </div>
-        </div>
-    </div>
-<script>
-    const API_BASE = window.location.origin; 
-    let finalBase64 = "";
-
-    async function initAI() {
-        try {
-            // Updated to use absolute path /models/ to be safer on Render
-            await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
-            await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-            await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-            
-            const check = await fetch(API_BASE + "/submit-and-check", { method: 'OPTIONS' });
-            if (check.ok) {
-                document.getElementById('status-dot').className = "dot online";
-                document.getElementById('status-text').innerText = "SECURE CLOUD ACTIVE";
-            }
-        } catch (e) { 
-            console.error("AI Init Error:", e);
-            document.getElementById('status-text').innerText = "MODEL ERROR - CHECK FILES"; 
-        }
-    }
-
-    document.getElementById('file-input').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const maxDim = 400; 
-                let w = img.width, h = img.height;
-                if (w > h) { if (w > maxDim) { h *= maxDim / w; w = maxDim; } }
-                else { if (h > maxDim) { w *= maxDim / h; h = maxDim; } }
-                canvas.width = w; canvas.height = h;
-                ctx.drawImage(img, 0, 0, w, h);
-                finalBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                document.getElementById('preview-img-ui').src = finalBase64;
-                document.getElementById('preview-img-ui').style.display = 'block';
-                document.getElementById('upload-placeholder').style.display = 'none';
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    };
-
-    async function handleProcess() {
-        const btn = document.getElementById('submit-btn');
-        const spinner = document.getElementById('btn-spinner');
-        const bText = document.getElementById('btn-text');
         
-        if(!finalBase64 || !document.getElementById('subj-name').value) {
-            return alert("Photo and Name required.");
+        <div id="g_id_signin_wrapper">
+            <div class="g_id_signin" 
+                 data-type="standard" 
+                 data-shape="rectangular" 
+                 data-theme="filled_blue" 
+                 data-text="signin_with" 
+                 data-size="large" 
+                 data-logo_alignment="left"
+                 data-width="320">
+            </div>
+        </div>
+
+        <div class="divider">OR</div>
+
+        <button class="btn-anon" onclick="enterAnonymously()">Enter Anonymously</button>
+    </div>
+
+    <script>
+        function enterAnonymously() {
+            sessionStorage.setItem('user_mode', 'anonymous');
+            sessionStorage.setItem('user_name', 'Guest');
+            window.location.href = 'search.html';
         }
 
-        btn.disabled = true;
-        bText.innerText = "SEARCHING...";
-        spinner.style.display = "block";
-
-        try {
-            const fileInput = document.getElementById('file-input');
-            const rawImg = await faceapi.bufferToImage(fileInput.files[0]);
-            const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
-            
-            if (!result) {
-                alert("Face not detected. Try a clearer photo.");
-                resetButton();
-                return;
+        function handleCredentialResponse(response) {
+            try {
+                // Decoding the Google Token
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const payload = JSON.parse(window.atob(base64));
+                
+                // Store User Data for this session
+                sessionStorage.setItem('user_mode', 'verified');
+                sessionStorage.setItem('user_email', payload.email);
+                sessionStorage.setItem('user_name', payload.name);
+                sessionStorage.setItem('user_pic', payload.picture);
+                
+                window.location.href = 'search.html';
+            } catch (error) {
+                console.error("Login Error:", error);
+                alert("Login failed. Please try again or enter anonymously.");
             }
-
-            const startDate = document.getElementById('date-start').value;
-            const endDate = document.getElementById('date-end').value;
-            const formattedContext = (startDate || endDate) ? `${startDate} to ${endDate}` : "Date not specified";
-
-            const payload = {
-                "descriptor": Array.from(result.descriptor),
-                "image_data": finalBase64, 
-                "name": document.getElementById('subj-name').value, 
-                "city": document.getElementById('subj-city').value,
-                "date_context": formattedContext,
-                "review_text": document.getElementById('obs-text').value || ""
-            };
-
-            const resp = await fetch(API_BASE + "/submit-and-check", {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-
-            const data = await resp.json();
-            data.user_query = payload;
-            sessionStorage.setItem('lastResult', JSON.stringify(data));
-            window.location.href = 'results.html';
-        } catch (err) { 
-            console.error(err);
-            alert("Error: " + err.message); 
-            resetButton();
         }
-    }
-
-    function resetButton() {
-        document.getElementById('submit-btn').disabled = false;
-        document.getElementById('btn-text').innerText = "SEARCH";
-        document.getElementById('btn-spinner').style.display = "none";
-    }
-</script>
+    </script>
 </body>
 </html>
