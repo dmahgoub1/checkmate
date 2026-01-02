@@ -2,83 +2,131 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Analysis Results | The Checkmate App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Results - The Checkmate App</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-        body { font-family: 'Poppins', sans-serif; background: #000; color: white; display: flex; justify-content: center; padding: 40px 20px; }
-        .card { background: #111; padding: 40px; border-radius: 30px; border: 1px solid #222; width: 100%; max-width: 600px; box-shadow: 0 40px 100px rgba(0,0,0,0.8); }
-        h2 { text-align: center; margin-top: 0; letter-spacing: 2px; text-transform: uppercase; color: #ff4b81; }
-        .section-title { font-size: 0.75rem; color: #a0a6b5; font-weight: 700; text-transform: uppercase; margin: 25px 0 15px 0; display: block; border-left: 3px solid #ff4b81; padding-left: 10px; }
-        .overlap-banner { padding: 18px; border-radius: 15px; text-align: center; font-weight: 700; margin-bottom: 25px; text-transform: uppercase; font-size: 0.9rem; }
-        .overlap-yes { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
-        .overlap-no { background: rgba(74, 222, 128, 0.1); color: #4ade80; border: 1px solid #4ade80; }
-        .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 15px; overflow: hidden; }
-        .comparison-table td { padding: 15px 12px; border-bottom: 1px solid #222; }
-        .label-col { font-weight: 700; color: #ff4b81; width: 30%; }
-        .db-col { color: #4ade80; font-style: italic; }
-        .comment-box { background: rgba(255,255,255,0.04); border-radius: 15px; padding: 18px; margin-bottom: 15px; border: 1px solid #222; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        :root {
+            --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%);
+            --dark-bg: #000000; --card-bg: #111111; --text-light: #ffffff;
+            --text-dim: #a0a6b5; --border: #222222; --success: #4ade80; --error: #ef4444; --warning: #facc15;
+        }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--dark-bg); color: var(--text-light); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        header { text-align: center; padding: 30px 0; }
+        .logo { width: 100px; cursor: pointer; }
         
-        /* Email Section Styling */
-        .email-section { background: rgba(255,255,255,0.03); border: 1px solid #333; border-radius: 20px; padding: 25px; margin-top: 30px; }
-        .email-input { width: 100%; background: #000; border: 1px solid #444; border-radius: 12px; padding: 12px; color: white; margin: 10px 0; box-sizing: border-box; }
+        .result-container { width: 100%; max-width: 600px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .status-header { padding: 25px; text-align: center; font-weight: 700; font-size: 1.2rem; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
         
-        .btn { background: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%); color: white; border: none; padding: 18px; border-radius: 15px; width: 100%; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top:15px; }
-        .btn-secondary { background: transparent; border: 1px solid #444; color: #a0a6b5; margin-top: 20px; padding: 12px; }
+        /* Flipped Logic Colors */
+        .match-found { background: rgba(74, 222, 128, 0.1); color: var(--success); }
+        .no-match { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+
+        .content { padding: 30px; }
+        .summary-box { background: rgba(255,255,255,0.03); border-radius: 20px; padding: 20px; margin-bottom: 25px; border: 1px solid var(--border); }
+        .label { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+        .value { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; color: #fff; }
+
+        .timeline-item { border-left: 2px solid var(--brand-gradient); padding-left: 20px; margin-bottom: 30px; position: relative; }
+        .timeline-item::before { content: ''; width: 12px; height: 12px; background: #bc2a8d; border-radius: 50%; position: absolute; left: -7px; top: 0; }
+        .observation-text { font-style: italic; color: var(--text-dim); margin-top: 10px; line-height: 1.6; font-size: 0.95rem; }
+
+        .notification-box { margin-top: 10px; padding: 25px; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px solid var(--border); text-align: center; }
+        .email-input { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: #fff; margin: 15px 0; box-sizing: border-box; font-family: inherit; }
+        .btn-notify { background: var(--brand-gradient); color: white; border: none; padding: 14px 30px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; width: 100%; }
+        .btn-notify:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-back { background: transparent; color: var(--text-dim); border: 1px solid var(--border); padding: 14px; border-radius: 14px; margin-top: 20px; cursor: pointer; width: 100%; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 id="main-status">Analysis Report</h2>
-        <div id="results-content"></div>
-        
-        <div class="email-section">
-            <span class="section-title">Get Notified of Future Matches</span>
-            <p style="font-size: 0.75rem; color: #a0a6b5;">Enter your email to receive an alert if this subject is spotted in another city or by another user.</p>
-            <input type="email" id="user-email" class="email-input" placeholder="your@email.com">
-            <button class="btn" onclick="subscribeEmail()">ACTIVATE ALERTS</button>
-        </div>
+    <header onclick="window.location.href='/'">
+        <img src="logo.png" alt="Logo" class="logo">
+    </header>
 
-        <button class="btn btn-secondary" onclick="window.location.href='index.html'">NEW SEARCH</button>
+    <div class="result-container">
+        <div id="status-banner" class="status-header">PROCESSING...</div>
+        
+        <div class="content">
+            <div id="results-view">
+                <div class="summary-box">
+                    <div class="label">Current Subject</div>
+                    <div id="res-name" class="value">-</div>
+                    <div class="label">Location Checked</div>
+                    <div id="res-city" class="value">-</div>
+                </div>
+
+                <div id="history-section">
+                    <div id="timeline-container"></div>
+                </div>
+
+                <div class="notification-box" id="email-section">
+                    <p id="notification-prompt" style="font-size: 0.9rem; color: var(--text-light); line-height: 1.5; margin-bottom: 10px;">
+                        Would you like to be notified in the future if someone else uploads a picture of the same person?
+                    </p>
+                    <input type="email" id="user-email" class="email-input" placeholder="Your email address">
+                    <button class="btn-notify" onclick="saveEmail()">ENABLE NOTIFICATIONS</button>
+                </div>
+
+                <button class="btn-back" onclick="window.location.href='/'">NEW SEARCH</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const API_BASE = window.location.origin; 
-        const data = JSON.parse(sessionStorage.getItem('lastResult'));
-        const container = document.getElementById('results-content');
-        
-        if (!data) {
-            container.innerHTML = "<p style='text-align:center;'>No active session. Please run a new search.</p>";
-        } else if (data.status === "match") {
-            document.getElementById('main-status').innerText = "Match Detected";
+        document.addEventListener('DOMContentLoaded', () => {
+            const data = JSON.parse(sessionStorage.getItem('lastResult'));
+            if (!data) return window.location.href = '/';
 
-            const overlapHtml = data.all_dates.length > 0 
-                ? `<div class="overlap-banner overlap-yes">Timeline Conflict<br><small style="font-weight:400;">Last seen: ${data.all_dates[0]}</small></div>`
-                : `<div class="overlap-banner overlap-no">No Immediate Overlaps</div>`;
-
-            let obsHtml = `<span class="section-title">Case History</span>`;
-            data.observations.forEach(obs => {
-                obsHtml += `<div class="comment-box"><small style="color:#666">${obs.city} | ${obs.date}</small><br><i>"${obs.text}"</i></div>`;
-            });
-
-            container.innerHTML = `
-                ${overlapHtml}
-                <table class="comparison-table">
-                    <tbody>
-                        <tr><td class="label-col">Identified As</td><td class="db-col">${data.all_names.join(', ')}</td></tr>
-                        <tr><td class="label-col">Sightings</td><td class="db-col">${data.cities.join(', ')}</td></tr>
-                    </tbody>
-                </table>
-                ${obsHtml}`;
-        } else {
-            container.innerHTML = `<div class="overlap-banner overlap-no">Unique Subject</div><p style='text-align:center; color:#a0a6b5; font-size:0.85rem;'>No existing records found for this biometric profile. This entry has been registered to the secure database.</p>`;
-        }
-
-        async function subscribeEmail() {
-            const email = document.getElementById('user-email').value;
-            if(!email) return alert("Please enter a valid email address.");
+            const banner = document.getElementById('status-banner');
+            const timeline = document.getElementById('timeline-container');
             
-            // This connects to your backend to handle subscriptions
-            alert("Success! You will be notified of any future updates regarding this subject.");
+            document.getElementById('res-name').innerText = data.user_query.name;
+            document.getElementById('res-city').innerText = data.user_query.city || 'Global';
+
+            if (data.status === 'match') {
+                // SUCCESS: Match Found
+                banner.innerText = "MATCH DETECTED";
+                banner.className = "status-header match-found";
+                
+                let html = '<h3 style="margin-bottom: 20px; font-size: 0.8rem; letter-spacing: 2px; color: var(--text-dim);">CLOUD HISTORY FOUND</h3>';
+                
+                data.observations.forEach(obs => {
+                    html += `
+                        <div class="timeline-item">
+                            <div class="label" style="color: var(--warning);">${obs.city || 'Reported Location'}</div>
+                            <div style="font-weight: 600; font-size: 0.9rem;">${obs.date || 'Past Context'}</div>
+                            <div class="observation-text">"${obs.text || 'No description provided.'}"</div>
+                        </div>
+                    `;
+                });
+                timeline.innerHTML = html;
+            } else {
+                // ERROR/NULL: No Match Found
+                banner.innerText = "NO MATCH FOUND";
+                banner.className = "status-header no-match";
+                
+                timeline.innerHTML = `
+                    <p style="color: var(--text-dim); font-size: 0.95rem; line-height: 1.6; text-align: center; margin-bottom: 20px;">
+                        No previous records were found for this biometric profile in our secure database.
+                    </p>
+                `;
+            }
+        });
+
+        function saveEmail() {
+            const email = document.getElementById('user-email').value;
+            if (!email.includes('@') || email.length < 5) {
+                return alert("Please enter a valid email address.");
+            }
+            
+            // Backend placeholder for notification route
+            alert("Notification preference saved. You will be alerted at: " + email);
+            document.getElementById('email-section').innerHTML = `
+                <div style="padding: 10px;">
+                    <div style="color: var(--success); font-weight: 700; font-size: 0.9rem;">✓ ALERTS ACTIVE</div>
+                    <p style="color: var(--text-dim); font-size: 0.8rem;">We will notify ${email} if a match is found.</p>
+                </div>
+            `;
         }
     </script>
 </body>

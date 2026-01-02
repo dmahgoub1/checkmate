@@ -27,7 +27,12 @@
         .form-group { margin-bottom: 20px; text-align: left; }
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
         input, textarea { width: 100%; background: #000; border: 1px solid #333; border-radius: 14px; padding: 14px; color: white; font-family: inherit; box-sizing: border-box; }
-        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; }
+        
+        /* Button & Spinner */
+        .btn-main { background: var(--brand-gradient); color: white; border: none; padding: 18px; border-radius: 18px; font-weight: 700; width: 100%; cursor: pointer; font-size: 1rem; position: relative; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-main:disabled { opacity: 0.8; cursor: not-allowed; }
+        .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body onload="initAI()">
@@ -38,7 +43,7 @@
     <div class="app-container">
         <div class="status-indicator">
             <div id="status-dot" class="dot"></div>
-            <span id="status-text">INITIATING SECURE HANDSHAKE...</span>
+            <span id="status-text">INITIALIZING...</span>
         </div>
         <div class="content">
             <div id="upload-zone" onclick="document.getElementById('file-input').click()">
@@ -49,12 +54,23 @@
             <div id="form-ui" style="margin-top: 25px;">
                 <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
                 <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex:1;"><label>Met On</label><input type="date" id="date-start"></div>
-                    <div class="form-group" style="flex:1;"><label>Last Seen</label><input type="date" id="date-end"></div>
+                
+                <div class="form-group">
+                    <label>When did you date this person?</label>
+                    <input type="text" id="date-context" placeholder="e.g. Summer 2024, 2 years ago">
                 </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1;"><label>Started</label><input type="date" id="date-start"></div>
+                    <div class="form-group" style="flex:1;"><label>Ended</label><input type="date" id="date-end"></div>
+                </div>
+                
                 <div class="form-group"><label>Observations</label><textarea id="obs-text" rows="3"></textarea></div>
-                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">RUN BACKGROUND CHECK</button>
+                
+                <button type="button" class="btn-main" id="submit-btn" onclick="handleProcess()">
+                    <span id="btn-text">SEARCH</span>
+                    <div class="spinner" id="btn-spinner"></div>
+                </button>
             </div>
         </div>
     </div>
@@ -67,16 +83,15 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
             
-            // Diagnostics check
             const check = await fetch(`${API_BASE}/submit-and-check`, { method: 'OPTIONS' });
             if (check.ok) {
                 document.getElementById('status-dot').className = "dot online";
-                document.getElementById('status-text').innerText = "PORTAL ONLINE: DATA SECURE";
+                document.getElementById('status-text').innerText = "SECURE CLOUD ACTIVE";
             } else {
-                document.getElementById('status-text').innerText = "OFFLINE: CHECK FIREWALL (0.0.0.0/0)";
+                document.getElementById('status-text').innerText = "CONNECTION ERROR";
             }
         } catch (e) { 
-            document.getElementById('status-text').innerText = "RETRYING CONNECTION..."; 
+            document.getElementById('status-text').innerText = "RECONNECTING..."; 
             setTimeout(initAI, 5000);
         }
     }
@@ -95,19 +110,24 @@
 
     async function handleProcess() {
         const btn = document.getElementById('submit-btn');
+        const spinner = document.getElementById('btn-spinner');
+        const btnText = document.getElementById('btn-text');
+
         if(!currentFile || !document.getElementById('subj-name').value) return alert("Photo and Name required.");
         
         btn.disabled = true;
-        btn.innerText = "QUERYING CLOUD...";
+        btnText.innerText = "SEARCHING...";
+        spinner.style.display = "block";
 
         try {
             const rawImg = await faceapi.bufferToImage(currentFile);
             const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
             
             if (!result) {
-                alert("Face not detected. Try a clearer shot.");
+                alert("Face not detected. Use a clearer image.");
                 btn.disabled = false;
-                btn.innerText = "RUN BACKGROUND CHECK";
+                btnText.innerText = "SEARCH";
+                spinner.style.display = "none";
                 return;
             }
             
@@ -115,6 +135,7 @@
                 descriptor: Array.from(result.descriptor),
                 name: document.getElementById('subj-name').value, 
                 city: document.getElementById('subj-city').value,
+                date_context: document.getElementById('date-context').value,
                 start: document.getElementById('date-start').value,
                 end: document.getElementById('date-end').value,
                 review_text: document.getElementById('obs-text').value
@@ -126,7 +147,7 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!resp.ok) throw new Error("Cloud rejected the link. Whitelist 0.0.0.0/0 in Atlas.");
+            if (!resp.ok) throw new Error("Database error.");
 
             const data = await resp.json();
             data.user_query = payload;
@@ -135,7 +156,8 @@
         } catch (err) {
             alert(err.message);
             btn.disabled = false;
-            btn.innerText = "RUN BACKGROUND CHECK";
+            btnText.innerText = "SEARCH";
+            spinner.style.display = "none";
         }
     }
 </script>
