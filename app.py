@@ -9,7 +9,6 @@ app = Flask(__name__)
 CORS(app)
 
 # --- DATABASE CONFIGURATION ---
-# Ensure your Render Environment Variable is named MONGO_URI
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client.checkmate_db
@@ -25,7 +24,6 @@ def health_check():
 
 @app.route('/submit-and-check', methods=['POST', 'OPTIONS'])
 def submit_and_check():
-    # Handle the frontend handshake/status check
     if request.method == 'OPTIONS':
         return jsonify({"status": "ready"}), 200
 
@@ -35,14 +33,14 @@ def submit_and_check():
     new_city = data.get("city")
     new_date_context = data.get("date_context")
     new_review = data.get("review_text")
-    new_image = data.get("image_data") # THE ACTUAL PHOTO
+    new_image = data.get("image_data")
 
     if not new_descriptor or not new_name:
         return jsonify({"error": "Missing required data"}), 400
 
     all_subjects = list(subjects_col.find({}))
     match_found = None
-    threshold = 0.6 # Strictness of face match (lower = stricter)
+    threshold = 0.6 
 
     for subject in all_subjects:
         distance = calculate_distance(new_descriptor, subject['descriptor'])
@@ -51,32 +49,46 @@ def submit_and_check():
             break
 
     if match_found:
-        # 1. Update the existing person with the new observation
+        # Create the new observation record
         new_obs = {
             "city": new_city,
             "date": new_date_context,
             "text": new_review,
-            "image": new_image # Save the photo taken today in the history
+            "image": new_image
         }
         
+        # Add it to the existing subject's history
         subjects_col.update_one(
             {"_id": match_found["_id"]},
             {"$push": {"observations": new_obs}}
         )
         
-        # 2. Return the history including the original photo
+        # Return history including the original photo
         return jsonify({
             "status": "match",
             "observations": match_found.get("observations", []) + [new_obs]
         })
 
     else:
-        # No match found - Create a new person in the database
+        # Create a new subject document
         new_subject = {
             "name": new_name,
             "descriptor": new_descriptor,
-            "image_data": new_image, # THE PRIMARY PHOTO FOR THIS PERSON
+            "image_data": new_image,
             "observations": [{
                 "city": new_city,
                 "date": new_date_context,
-                "text
+                "text": new_review,
+                "image": new_image
+            }]
+        }
+        subjects_col.insert_one(new_subject)
+        
+        return jsonify({
+            "status": "no_match",
+            "message": "New profile created."
+        })
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
