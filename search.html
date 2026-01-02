@@ -22,8 +22,21 @@
         .container { width: 100%; max-width: 500px; background: #111; padding: 25px; border-radius: 25px; border: 1px solid #222; box-sizing: border-box; }
         input, textarea { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; font-family: inherit; }
         
-        .file-label { display: block; text-align: center; padding: 12px; background: #1a1a1a; border: 1px dashed #444; border-radius: 12px; cursor: pointer; margin-bottom: 15px; font-size: 0.85rem; color: #a0a6b5; }
-        #file-upload { display: none; }
+        /* File Upload Styling - Fixed visibility */
+        .file-label { 
+            display: block; 
+            text-align: center; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            border: 2px dashed #444; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            margin: 15px 0; 
+            font-size: 0.9rem; 
+            color: #ff4b81; 
+            font-weight: 600;
+        }
+        #file-upload { display: none !important; }
 
         button { width: 100%; padding: 18px; border-radius: 15px; border: none; background: var(--brand-gradient); color: #fff; font-weight: 700; cursor: pointer; margin-top: 15px; font-size: 1rem; letter-spacing: 1px; }
         
@@ -50,8 +63,8 @@
             <img id="image-preview" alt="Preview">
         </div>
         
-        <label for="file-upload" class="file-label" id="file-label-text">
-            Click to upload a photo instead of camera
+        <label for="file-upload" class="file-label">
+            <span id="file-label-text">📷 UPLOAD FROM GALLERY</span>
         </label>
         <input type="file" id="file-upload" accept="image/*">
 
@@ -69,7 +82,7 @@
         const userPic = sessionStorage.getItem('user_pic');
 
         document.getElementById('welcome-text').innerText = userMode === 'verified' ? `Verified: ${userName}` : `Mode: Anonymous`;
-        if(userPic) {
+        if(userPic && userPic !== 'undefined') {
             const img = document.getElementById('header-pic');
             img.src = userPic;
             img.style.display = 'block';
@@ -84,20 +97,25 @@
 
         async function startApp() {
             try {
+                // Ensure models load from the correct path
                 await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
                 await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
                 await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
                 
+                statusText.innerText = "MODELS LOADED";
+
                 navigator.mediaDevices.getUserMedia({ video: {} })
                     .then(stream => { 
                         video.srcObject = stream;
                         dot.classList.add('status-active');
                         statusText.innerText = "SECURE CLOUD ACTIVE";
-                    }).catch(() => {
-                        statusText.innerText = "CAMERA BLOCKED - USE UPLOAD";
+                    }).catch(err => {
+                        console.log("Camera access denied", err);
+                        statusText.innerText = "CAMERA OFF - USE UPLOAD";
                     });
             } catch (e) {
-                statusText.innerText = "AI MODEL ERROR";
+                console.error(e);
+                statusText.innerText = "AI MODEL ERROR - REFRESH";
             }
         }
 
@@ -110,7 +128,7 @@
                     imagePreview.style.display = 'block';
                     video.style.display = 'none';
                     useUploadedFile = true;
-                    document.getElementById('file-label-text').innerText = "Photo selected: " + file.name;
+                    document.getElementById('file-label-text').innerText = "✅ PHOTO SELECTED";
                 };
                 reader.readAsDataURL(file);
             }
@@ -118,9 +136,14 @@
 
         document.getElementById('search-btn').onclick = async () => {
             const inputElement = useUploadedFile ? imagePreview : video;
+            
+            statusText.innerText = "ANALYZING FACE...";
             const detection = await faceapi.detectSingleFace(inputElement).withFaceLandmarks().withFaceDescriptor();
             
-            if (!detection) return alert("No face detected. Please ensure the person's face is clear.");
+            if (!detection) {
+                statusText.innerText = "FACE NOT FOUND";
+                return alert("No face detected. Please ensure the person's face is clear and well-lit.");
+            }
 
             const payload = {
                 name: document.getElementById('subject-name').value,
@@ -134,16 +157,20 @@
 
             statusText.innerText = "SEARCHING DATABASE...";
 
-            const resp = await fetch('/submit-and-check', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const resp = await fetch('/submit-and-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            const result = await resp.json();
-            result.user_query = { name: payload.name };
-            sessionStorage.setItem('lastResult', JSON.stringify(result));
-            window.location.href = 'results.html';
+                const result = await resp.json();
+                result.user_query = { name: payload.name };
+                sessionStorage.setItem('lastResult', JSON.stringify(result));
+                window.location.href = 'results.html';
+            } catch (error) {
+                alert("Search failed. Check your internet connection.");
+            }
         };
 
         function captureImage() {
