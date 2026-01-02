@@ -1,6 +1,6 @@
 flask
 flask-cors
-gunicorn
-numpy
 pymongo
-dnspython
+numpy
+face-recognition
+Pillow
