@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis Results | Trust Your Heart</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; background: #000; color: white; display: flex; justify-content: center; padding: 40px 20px; }
+        .card { background: #111; padding: 40px; border-radius: 30px; border: 1px solid #222; width: 100%; max-width: 600px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        
+        /* Headers */
+        h2 { text-align: center; margin-top: 0; letter-spacing: 2px; text-transform: uppercase; }
+        .section-title { font-size: 0.75rem; color: #a0a6b5; font-weight: 700; text-transform: uppercase; margin: 25px 0 15px 0; display: block; border-left: 3px solid #ff4b81; padding-left: 10px; }
+
+        /* Overlap Banner */
+        .overlap-banner { padding: 18px; border-radius: 15px; text-align: center; font-weight: 700; margin-bottom: 25px; text-transform: uppercase; font-size: 0.9rem; }
+        .overlap-yes { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .overlap-no { background: rgba(74, 222, 128, 0.1); color: #4ade80; border: 1px solid #4ade80; }
+
+        /* Comparison Table */
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: 15px; overflow: hidden; }
+        .comparison-table th { text-align: left; color: #a0a6b5; font-size: 0.65rem; padding: 12px; border-bottom: 1px solid #222; }
+        .comparison-table td { padding: 15px 12px; border-bottom: 1px solid #222; }
+        .label-col { font-weight: 700; color: #ff4b81; width: 30%; }
+        .db-col { color: #4ade80; font-style: italic; }
+
+        /* Observation Cards */
+        .comment-box { background: rgba(255,255,255,0.04); border-radius: 15px; padding: 18px; margin-bottom: 15px; border: 1px solid #222; }
+        .comment-meta { font-size: 0.65rem; color: #666; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+        .comment-text { font-size: 0.9rem; color: #eee; line-height: 1.6; font-style: italic; }
+
+        /* Watchlist */
+        #notif-section { margin-top: 40px; padding: 25px; border-radius: 20px; background: #050505; border: 1px solid #222; text-align: center; }
+        .notif-input { width: 100%; background: #111; border: 1px solid #333; padding: 14px; color: white; border-radius: 12px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; }
+        
+        .btn { background: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%); color: white; border: none; padding: 18px; border-radius: 15px; width: 100%; cursor: pointer; font-weight: 700; font-size: 1rem; transition: 0.3s; }
+        .btn-sub { background: #222; border: 1px solid #444; font-size: 0.8rem; padding: 10px 25px; width: auto; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 id="main-status">Analysis Report</h2>
+        <div id="results-content"></div>
+
+        <div id="notif-section">
+            <span class="section-title" style="border:none; text-align:center; padding:0; margin-top:0;">Enable Alerts</span>
+            <p style="font-size: 0.7rem; color: #777; margin-bottom: 15px;">We'll email you if another user performs a biometric search on this individual.</p>
+            <input type="email" id="user-email" class="notif-input" placeholder="Email for alerts">
+            <button class="btn btn-sub" id="sub-btn" onclick="subscribe()">MONITOR PROFILE</button>
+        </div>
+
+        <button class="btn" style="margin-top:25px;" onclick="window.location.href='index.html'">START NEW SEARCH</button>
+    </div>
+
+    <script>
+        // --- ONCE LIVE, CHANGE THIS TO YOUR DOMAIN ---
+        const API_BASE = "http://127.0.0.1:5000"; 
+
+        const data = JSON.parse(sessionStorage.getItem('lastResult'));
+        const container = document.getElementById('results-content');
+        
+        if (!data) {
+            container.innerHTML = "<p style='text-align:center;'>No active session data found.</p>";
+        } else if (data.status === "match") {
+            document.getElementById('main-status').style.color = "#ff4b81";
+            document.getElementById('main-status').innerText = "Match Detected";
+
+            // 1. Overlap Banner
+            const hasOverlap = data.all_dates.length > 0;
+            const overlapHtml = hasOverlap 
+                ? `<div class="overlap-banner overlap-yes">Potential Dating Overlap<br><small style="font-weight:400; font-size:0.7rem;">Timeline Conflict: ${data.all_dates[0]}</small></div>`
+                : `<div class="overlap-banner overlap-no">No Timeline Overlaps Found</div>`;
+
+            // 2. Observations Feed
+            let observationsHtml = "";
+            if(data.observations && data.observations.length > 0) {
+                observationsHtml = `<span class="section-title">Historical Observations</span>`;
+                data.observations.forEach(obs => {
+                    observationsHtml += `
+                        <div class="comment-box">
+                            <div class="comment-meta">Reported in ${obs.city} | ${obs.date}</div>
+                            <div class="comment-text">"${obs.text}"</div>
+                        </div>`;
+                });
+            }
+
+            // 3. Table Comparison
+            container.innerHTML = `
+                ${overlapHtml}
+                <span class="section-title">Data Comparison</span>
+                <table class="comparison-table">
+                    <thead><tr><th>Field</th><th>Your Input</th><th>Database Info</th></tr></thead>
+                    <tbody>
+                        <tr><td class="label-col">Name</td><td>${data.user_query.name}</td><td class="db-col">${data.all_names.join(', ')}</td></tr>
+                        <tr><td class="label-col">City</td><td>${data.user_query.city}</td><td class="db-col">${data.cities.join(', ')}</td></tr>
+                    </tbody>
+                </table>
+                ${observationsHtml}`;
+        } else {
+            // New Entry View
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px 20px; border:1px dashed #333; border-radius:20px; margin-bottom:20px;">
+                    <p style="color:#4ade80; font-weight:700; font-size:1.2rem; margin-bottom:10px;">Unique Profile</p>
+                    <p style="color:#888; font-size:0.85rem; line-height:1.6;">This facial signature does not exist in the database. They have been logged as a new entry.</p>
+                </div>`;
+        }
+
+        async function subscribe() {
+            const email = document.getElementById('user-email').value;
+            if(!email) return alert("Email required.");
+            const subBtn = document.getElementById('sub-btn');
+            subBtn.innerText = "Processing...";
+            try {
+                const resp = await fetch(`${API_BASE}/subscribe`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: email, descriptor: data.user_query.descriptor })
+                });
+                if(resp.ok) {
+                    document.getElementById('notif-section').innerHTML = `<p style="color:#4ade80; font-weight:700; font-size:0.9rem;">✓ Watchlist Active</p>`;
+                }
+            } catch (err) { alert("Error connecting to server."); }
+        }
+    </script>
+</body>
+</html>
