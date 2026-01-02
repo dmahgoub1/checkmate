@@ -3,6 +3,6 @@ flask-cors
 pymongo
 numpy
 Pillow
-face-recognition-models
+cmake
 --find-links https://wheels.galaxyproject.org/ dlib
 face-recognition
