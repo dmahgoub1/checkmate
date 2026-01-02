@@ -11,7 +11,7 @@
         :root {
             --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%);
             --dark-bg: #000000; --card-bg: #111111; --text-light: #ffffff;
-            --text-dim: #a0a6b5; --border: #222222; --success: #4ade80;
+            --text-dim: #a0a6b5; --border: #222222; --success: #4ade80; --error: #ef4444;
         }
         body { font-family: 'Poppins', sans-serif; background-color: var(--dark-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         header { text-align: center; padding: 50px 20px 30px 20px; cursor: pointer; }
@@ -19,10 +19,10 @@
         .tagline { color: var(--text-dim); font-size: 0.9rem; margin-top: 20px; letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
         .app-container { width: 90%; max-width: 550px; background: var(--card-bg); border-radius: 30px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.8); margin-bottom: 40px; }
         .status-indicator { background: rgba(255,255,255,0.03); padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px solid var(--border); letter-spacing: 1px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
         .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
         .content { padding: 30px; }
-        #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.01); }
+        #upload-zone { border: 2px dashed var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(255,255,255,0.01); transition: 0.3s; }
         #preview-img-ui { width: 100%; height: 220px; border-radius: 20px; object-fit: cover; display: none; margin-bottom: 20px; }
         .form-group { margin-bottom: 20px; text-align: left; }
         label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
@@ -38,7 +38,7 @@
     <div class="app-container">
         <div class="status-indicator">
             <div id="status-dot" class="dot"></div>
-            <span id="status-text">CONNECTING TO SECURE CLOUD...</span>
+            <span id="status-text">INITIATING SECURE HANDSHAKE...</span>
         </div>
         <div class="content">
             <div id="upload-zone" onclick="document.getElementById('file-input').click()">
@@ -48,7 +48,7 @@
             </div>
             <div id="form-ui" style="margin-top: 25px;">
                 <div class="form-group"><label>Name</label><input type="text" id="subj-name" placeholder="Full Name"></div>
-                <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="e.g. Los Angeles"></div>
+                <div class="form-group"><label>City</label><input type="text" id="subj-city" placeholder="Location"></div>
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex:1;"><label>Met On</label><input type="date" id="date-start"></div>
                     <div class="form-group" style="flex:1;"><label>Last Seen</label><input type="date" id="date-end"></div>
@@ -66,10 +66,16 @@
             await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
             await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
             await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-            document.getElementById('status-dot').className = "dot online";
-            document.getElementById('status-text').innerText = "CLOUD DATABASE ACTIVE";
+            
+            // Diagnostics check
+            const check = await fetch(`${API_BASE}/submit-and-check`, { method: 'OPTIONS' });
+            if (check.ok) {
+                document.getElementById('status-dot').className = "dot online";
+                document.getElementById('status-text').innerText = "PORTAL ONLINE: DATA SECURE";
+            } else {
+                document.getElementById('status-text').innerText = "OFFLINE: CHECK FIREWALL (0.0.0.0/0)";
+            }
         } catch (e) { 
-            console.error(e);
             document.getElementById('status-text').innerText = "RETRYING CONNECTION..."; 
             setTimeout(initAI, 5000);
         }
@@ -89,17 +95,17 @@
 
     async function handleProcess() {
         const btn = document.getElementById('submit-btn');
-        if(!currentFile || !document.getElementById('subj-name').value) return alert("Photo and Name are required.");
+        if(!currentFile || !document.getElementById('subj-name').value) return alert("Photo and Name required.");
         
         btn.disabled = true;
-        btn.innerText = "SCANNING BIOMETRICS...";
+        btn.innerText = "QUERYING CLOUD...";
 
         try {
             const rawImg = await faceapi.bufferToImage(currentFile);
             const result = await faceapi.detectSingleFace(rawImg).withFaceLandmarks().withFaceDescriptor();
             
             if (!result) {
-                alert("Face not detected. Try a clearer photo.");
+                alert("Face not detected. Try a clearer shot.");
                 btn.disabled = false;
                 btn.innerText = "RUN BACKGROUND CHECK";
                 return;
@@ -120,17 +126,13 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!resp.ok) {
-                const errData = await resp.text();
-                throw new Error("Server error (500). Please check MongoDB IP Whitelist.");
-            }
+            if (!resp.ok) throw new Error("Cloud rejected the link. Whitelist 0.0.0.0/0 in Atlas.");
 
             const data = await resp.json();
             data.user_query = payload;
             sessionStorage.setItem('lastResult', JSON.stringify(data));
             window.location.href = 'results.html';
         } catch (err) {
-            console.error(err);
             alert(err.message);
             btn.disabled = false;
             btn.innerText = "RUN BACKGROUND CHECK";
