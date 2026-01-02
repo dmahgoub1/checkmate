@@ -1,4 +1,6 @@
-Flask
-Flask-Cors
-numpy
+flask
+flask-cors
 gunicorn
+numpy
+pymongo
+dnspython
