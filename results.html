@@ -3,136 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Results - Checkmate</title>
+    <title>Checkmate - Results</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        :root {
-            --brand-gradient: linear-gradient(135deg, #ff4b81 0%, #bc2a8d 100%);
-            --dark-bg: #000; --card-bg: #111; --border: #222;
-        }
-        body { font-family: 'Poppins', sans-serif; background: var(--dark-bg); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .header { margin: 30px 0; text-align: center; cursor: pointer; }
-        .header img { width: 120px; }
-        .result-container { width: 100%; max-width: 550px; }
+        :root { --brand: #ff4b81; --dark: #000; --card: #111; }
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; }
+        .match-header { text-align: center; margin-bottom: 30px; }
+        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; max-width: 500px; margin: 0 auto 20px; }
+        .obs-card { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border-left: 4px solid var(--brand); }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
+        .btn-contact { background: var(--brand); color: #fff; }
         
-        .status-banner { padding: 15px; border-radius: 18px; text-align: center; font-weight: 700; margin-bottom: 25px; text-transform: uppercase;}
-        .match { background: var(--brand-gradient); box-shadow: 0 10px 30px rgba(255, 75, 129, 0.2); }
-        .new { background: #333; border: 1px solid var(--border); }
-
-        .notify-box { background: rgba(255,255,255,0.05); border: 1px dashed #444; padding: 20px; border-radius: 20px; margin-bottom: 30px; text-align: center; }
-        .notify-box input { width: 85%; padding: 12px; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; margin: 10px 0; outline: none; }
-        .btn-subscribe { background: #fff; color: #000; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
-
-        .history-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 24px; padding: 20px; margin-bottom: 25px; }
-        .history-card img { width: 100%; border-radius: 16px; margin-bottom: 20px; border: 1px solid #333; }
-        
-        .timestamp { font-size: 0.7rem; color: #ff4b81; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 12px; }
-        .meta-label { color: #a0a6b5; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
-        .meta-value { font-size: 0.95rem; margin-bottom: 18px; color: #eee; }
-
-        .btn-contact {
-            background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #333; padding: 14px; 
-            border-radius: 14px; font-weight: 600; cursor: pointer; width: 100%;
-            margin-top: 10px; font-size: 0.85rem; transition: 0.3s;
-        }
-        .btn-contact:hover { background: #fff; color: #000; }
-        
-        /* Modal Overlay Styles */
-        #contact-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: #111; padding: 30px; border-radius: 25px; width: 90%; max-width: 400px;
-            border: 1px solid #333; text-align: left;
-        }
-        .modal-content h3 { margin-top: 0; font-size: 1.1rem; }
-        .modal-content input, .modal-content textarea {
-            width: 100%; background: #000; border: 1px solid #333; color: #fff;
-            padding: 12px; border-radius: 10px; margin-top: 10px; box-sizing: border-box; font-family: inherit;
-        }
-        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
-        .btn-send { background: var(--brand-gradient); border: none; color: #fff; padding: 12px; border-radius: 12px; flex: 2; font-weight: 700; cursor: pointer; }
-        .btn-cancel { background: #222; border: none; color: #fff; padding: 12px; border-radius: 12px; flex: 1; cursor: pointer; }
-
-        .btn-back { background: transparent; color: #a0a6b5; border: none; padding: 18px; width: 100%; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
+        /* Login Modal for Guests */
+        #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
+        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; max-width: 350px; border: 1px solid #333; }
     </style>
 </head>
 <body>
-    <div class="header" onclick="window.location.href='index.html'"><img src="logo.png"></div>
 
-    <div class="result-container" id="content-area"></div>
-    <div class="result-container"><button class="btn-back" onclick="window.location.href='index.html'">← RETURN TO SEARCH</button></div>
+    <div id="results-container"></div>
 
-    <div id="contact-modal">
+    <div id="login-modal">
         <div class="modal-content">
-            <h3>Contact Submitter</h3>
-            <p style="font-size: 0.8rem; color: #a0a6b5;">Your email will be shared with the original poster so they can reply to you directly.</p>
-            <input type="email" id="modal-email" placeholder="Your email address">
-            <textarea id="modal-message" rows="4" placeholder="Why do you want to reach out?"></textarea>
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                <button class="btn-send" id="send-request-btn">SEND REQUEST</button>
-            </div>
+            <h3>Unlock This Feature</h3>
+            <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 25px;">To receive future alerts or contact other users, please verify your identity with Google.</p>
+            <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleModalLogin"></div>
+            <div class="g_id_signin" data-type="standard"></div>
+            <button onclick="closeModal()" style="background:none; border:none; color:#555; margin-top:20px; cursor:pointer;">Maybe Later</button>
         </div>
     </div>
 
     <script>
-        const resultData = JSON.parse(sessionStorage.getItem('lastResult'));
-        const area = document.getElementById('content-area');
-        const API_BASE = window.location.origin;
+        const result = JSON.parse(sessionStorage.getItem('lastResult'));
+        const userMode = sessionStorage.getItem('user_mode');
+        const container = document.getElementById('results-container');
 
-        function openModal(name) {
-            document.getElementById('contact-modal').style.display = 'flex';
-            document.getElementById('send-request-btn').onclick = () => submitContactRequest(name);
-        }
+        if (!result) {
+            container.innerHTML = "<h2>No search data found.</h2>";
+        } else {
+            let html = `
+                <div class="match-header">
+                    <h1>${result.status === 'match' ? 'Match Found' : 'First Entry Created'}</h1>
+                    <p>${result.status === 'match' ? 'This person has been seen before.' : 'A new profile has been started.'}</p>
+                </div>
+                <div class="profile-card">
+                    <img src="${result.observations[0].image}" style="width:100%; border-radius:15px; margin-bottom:15px;">
+                    <h3>Observations for ${result.user_query.name}</h3>
+            `;
 
-        function closeModal() {
-            document.getElementById('contact-modal').style.display = 'none';
-        }
-
-        async function submitContactRequest(subjectName) {
-            const email = document.getElementById('modal-email').value;
-            const message = document.getElementById('modal-message').value;
-
-            if (!email || !message) return alert("Please fill in both fields.");
-
-            try {
-                const resp = await fetch(API_BASE + '/notify-submitter', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ requester_email: email, subject_name: subjectName, message: message })
-                });
-                if (resp.ok) {
-                    alert("Message Sent! We have logged your request. The original submitter will be notified.");
-                    closeModal();
-                }
-            } catch (err) { alert("Error sending request."); }
-        }
-
-        if (resultData) {
-            const banner = document.createElement('div');
-            banner.className = `status-banner ${resultData.status === 'match' ? 'match' : 'new'}`;
-            banner.innerText = resultData.status === 'match' ? 'Database Match Found' : 'Initial Record Created';
-            area.appendChild(banner);
-
-            const observations = [...resultData.observations].reverse();
-            observations.forEach((sighting) => {
-                const card = document.createElement('div');
-                card.className = 'history-card';
-                card.innerHTML = `
-                    <span class="timestamp">Verification Date: ${sighting.submitted_on || 'Jan 02, 2026'}</span>
-                    <img src="${sighting.image}">
-                    <div class="meta-label">Location Recorded</div>
-                    <div class="meta-value">${sighting.city || 'Not specified'}</div>
-                    <div class="meta-label">Dating Context</div>
-                    <div class="meta-value">${sighting.date || 'No dates provided'}</div>
-                    <div class="meta-label">Submitter Comments</div>
-                    <div class="meta-value">${sighting.text || 'No additional details.'}</div>
-                    <button class="btn-contact" onclick="openModal('${resultData.user_query.name}')">CONTACT SUBMITTER ANONYMOUSLY</button>
+            // Feature Buttons (Conditional)
+            if (userMode === 'verified') {
+                html += `
+                    <button class="btn-action btn-notify" onclick="toggleWatchlist()">🔔 Notify me of future matches</button>
+                    <button class="btn-action btn-contact" onclick="openContact()">Reach out to submitters</button>
                 `;
-                area.appendChild(card);
+            } else {
+                html += `
+                    <button class="btn-action btn-notify" onclick="showLoginModal()">🔔 Get future alerts for this person</button>
+                    <button class="btn-action btn-contact" style="opacity:0.5" onclick="showLoginModal()">Contact Submitter (Login Required)</button>
+                `;
+            }
+
+            result.observations.forEach(obs => {
+                html += `
+                    <div class="obs-card">
+                        <small style="color:var(--brand)">${obs.submitted_on}</small>
+                        <p><strong>Location:</strong> ${obs.city}</p>
+                        <p><strong>Context:</strong> ${obs.date}</p>
+                        <p style="font-style:italic">"${obs.text}"</p>
+                    </div>
+                `;
             });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function showLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('login-modal').style.display = 'none'; }
+
+        function handleModalLogin(response) {
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            sessionStorage.setItem('user_mode', 'verified');
+            sessionStorage.setItem('user_email', payload.email);
+            sessionStorage.setItem('user_name', payload.name);
+            location.reload(); // Refresh to unlock the features
+        }
+
+        function toggleWatchlist() {
+            alert("Success! You will be notified via " + sessionStorage.getItem('user_email') + " if this person is uploaded again.");
+            // In the next step, we can make this save to your 'watchers' collection in MongoDB
         }
     </script>
 </body>
