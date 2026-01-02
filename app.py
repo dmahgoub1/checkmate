@@ -4,42 +4,44 @@ import json
 import os
 import numpy as np
 
-app = Flask(__name__, static_folder='.') # Tell Flask to look in the root folder
+# This ensures the app knows it is serving from the root folder
+app = Flask(__name__, static_url_path='', static_folder='.')
 CORS(app)
 
 DB_FILE = 'database.json'
-
-# --- NEW: ADD THESE ROUTES TO FIX THE 404 ---
 
 @app.route('/')
 def serve_index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('.', path)
+@app.route('/results.html')
+def serve_results():
+    return send_from_directory('.', 'results.html')
 
-# --- YOUR EXISTING LOGIC BELOW ---
+@app.route('/models/<path:filename>')
+def serve_models(filename):
+    return send_from_directory('models', filename)
 
-def load_db():
-    if not os.path.exists(DB_FILE): return []
-    try:
-        with open(DB_FILE, 'r') as f: return json.load(f)
-    except: return []
-
-def save_db(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-@app.route('/submit-and-check', methods=['POST'])
+@app.route('/submit-and-check', methods=['POST', 'OPTIONS'])
 def submit_and_check():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+        
     data = request.json
     new_descriptor = np.array(data['descriptor'])
-    db = load_db()
+    
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, 'w') as f:
+            json.dump([], f)
+            
+    with open(DB_FILE, 'r') as f:
+        try:
+            db = json.load(f)
+        except:
+            db = []
     
     match_found = False
     threshold = 0.6 
-    
     all_names, all_cities, all_dates, observations = [], [], [], []
 
     for entry in db:
@@ -49,16 +51,21 @@ def submit_and_check():
             match_found = True
             if entry.get('name') not in all_names: all_names.append(entry.get('name'))
             if entry.get('city') not in all_cities: all_cities.append(entry.get('city'))
-            date_range = f"{entry.get('start', 'N/A')} to {entry.get('end', 'N/A')}"
-            all_dates.append(date_range)
-            observations.append({"date": date_range, "city": entry.get('city'), "text": entry.get('review_text')})
+            dr = f"{entry.get('start', 'N/A')} to {entry.get('end', 'N/A')}"
+            all_dates.append(dr)
+            observations.append({"date": dr, "city": entry.get('city'), "text": entry.get('review_text')})
 
     db.append(data)
-    save_db(db)
+    with open(DB_FILE, 'w') as f:
+        json.dump(db, f, indent=4)
 
-    if match_found:
-        return jsonify({"status": "match", "all_names": all_names, "cities": all_cities, "all_dates": all_dates, "observations": observations})
-    return jsonify({"status": "new"})
+    return jsonify({
+        "status": "match" if match_found else "new",
+        "all_names": all_names,
+        "cities": all_cities,
+        "all_dates": all_dates,
+        "observations": observations
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
