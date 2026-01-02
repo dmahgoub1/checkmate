@@ -1,76 +1,82 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from pymongo import MongoClient
 import os
 import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 
-app = Flask(__name__, static_url_path='', static_folder='.')
+app = Flask(__name__)
 CORS(app)
 
-# --- DATABASE CONNECTION ---
-# This ensures it looks for the Render variable 'MONGO_URI'
+# --- DATABASE CONFIGURATION ---
+# Ensure your Render Environment Variable is named MONGO_URI
 MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client.checkmate_db
+subjects_col = db.subjects
 
-if not MONGO_URI:
-    print("CRITICAL ERROR: MONGO_URI environment variable not found!")
-    # Fallback is removed to prevent it from looking at 'localhost'
-else:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    db = client['checkmate_db']
-    collection = db['subjects']
+def calculate_distance(desc1, desc2):
+    """Calculates Euclidean distance between two face descriptors."""
+    return np.linalg.norm(np.array(desc1) - np.array(desc2))
 
 @app.route('/')
-def serve_index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/results.html')
-def serve_results():
-    return send_from_directory('.', 'results.html')
-
-@app.route('/models/<path:filename>')
-def serve_models(filename):
-    return send_from_directory('models', filename)
+def health_check():
+    return "Checkmate API is Live.", 200
 
 @app.route('/submit-and-check', methods=['POST', 'OPTIONS'])
 def submit_and_check():
+    # Handle the frontend handshake/status check
     if request.method == 'OPTIONS':
-        return jsonify({"status": "ok"}), 200
-        
+        return jsonify({"status": "ready"}), 200
+
     data = request.json
-    new_descriptor = np.array(data['descriptor'])
-    
-    match_found = False
-    threshold = 0.6 
-    all_names, all_cities, all_dates, observations = [], [], [], []
+    new_descriptor = data.get("descriptor")
+    new_name = data.get("name")
+    new_city = data.get("city")
+    new_date_context = data.get("date_context")
+    new_review = data.get("review_text")
+    new_image = data.get("image_data") # THE ACTUAL PHOTO
 
-    try:
-        # Search MongoDB
-        for entry in collection.find():
-            old_descriptor = np.array(entry['descriptor'])
-            dist = np.linalg.norm(new_descriptor - old_descriptor)
-            
-            if dist < threshold:
-                match_found = True
-                if entry.get('name') not in all_names: all_names.append(entry.get('name'))
-                if entry.get('city') not in all_cities: all_cities.append(entry.get('city'))
-                dr = f"{entry.get('start', 'N/A')} to {entry.get('end', 'N/A')}"
-                all_dates.append(dr)
-                observations.append({"date": dr, "city": entry.get('city'), "text": entry.get('review_text')})
+    if not new_descriptor or not new_name:
+        return jsonify({"error": "Missing required data"}), 400
 
-        # Save the new entry
-        collection.insert_one(data)
+    all_subjects = list(subjects_col.find({}))
+    match_found = None
+    threshold = 0.6 # Strictness of face match (lower = stricter)
 
+    for subject in all_subjects:
+        distance = calculate_distance(new_descriptor, subject['descriptor'])
+        if distance < threshold:
+            match_found = subject
+            break
+
+    if match_found:
+        # 1. Update the existing person with the new observation
+        new_obs = {
+            "city": new_city,
+            "date": new_date_context,
+            "text": new_review,
+            "image": new_image # Save the photo taken today in the history
+        }
+        
+        subjects_col.update_one(
+            {"_id": match_found["_id"]},
+            {"$push": {"observations": new_obs}}
+        )
+        
+        # 2. Return the history including the original photo
         return jsonify({
-            "status": "match" if match_found else "new",
-            "all_names": all_names,
-            "cities": all_cities,
-            "all_dates": all_dates,
-            "observations": observations
+            "status": "match",
+            "observations": match_found.get("observations", []) + [new_obs]
         })
-    except Exception as e:
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Database connection failed"}), 500
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    else:
+        # No match found - Create a new person in the database
+        new_subject = {
+            "name": new_name,
+            "descriptor": new_descriptor,
+            "image_data": new_image, # THE PRIMARY PHOTO FOR THIS PERSON
+            "observations": [{
+                "city": new_city,
+                "date": new_date_context,
+                "text
