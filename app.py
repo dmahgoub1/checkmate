@@ -6,10 +6,11 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 
+# --- INITIALIZATION ---
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
-# --- CONFIG ---
+# --- CONFIG (Add these to Render Environment Variables) ---
 MONGO_URI = os.environ.get("MONGO_URI")
 SIGHTENGINE_USER = os.environ.get("SIGHTENGINE_USER")
 SIGHTENGINE_SECRET = os.environ.get("SIGHTENGINE_SECRET")
@@ -20,8 +21,10 @@ subjects_col = db.subjects
 watchers_col = db.watchers
 
 def calculate_distance(desc1, desc2):
+    """Calculates how similar two faces are."""
     return np.linalg.norm(np.array(desc1) - np.array(desc2))
 
+# --- PAGE ROUTES ---
 @app.route('/')
 def serve_index(): return send_from_directory(app.static_folder, 'index.html')
 
@@ -31,36 +34,49 @@ def serve_search(): return send_from_directory(app.static_folder, 'search.html')
 @app.route('/results.html')
 def serve_results(): return send_from_directory(app.static_folder, 'results.html')
 
+# --- CORE SEARCH LOGIC ---
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     data = request.json
     image_b64 = data.get("image_data")
     
-    # 1. Send to Sightengine to get Face Vector
-    # We use their 'face-attributes' endpoint which can return face vectors
+    if not image_b64:
+        return jsonify({"error": "No image data"}), 400
+
+    # 1. Ask Sightengine to analyze the face
+    # We use the 'face-attributes' model to get a unique feature vector
     params = {
         'api_user': SIGHTENGINE_USER,
         'api_secret': SIGHTENGINE_SECRET,
-        'base64': image_b64,
-        'models': 'face-attributes'
+        'models': 'face-attributes',
+        'base64': image_b64
     }
     
     try:
         r = requests.post('https://api.sightengine.com/1.0/check.json', data=params)
         output = r.json()
 
+        if output.get('status') == 'failure':
+            print(f"Sightengine Error: {output.get('error')}")
+            return jsonify({"error": "AI Service Error"}), 500
+
         if not output.get('faces'):
-            return jsonify({"status": "no_face", "message": "No face detected by AI."}), 200
+            return jsonify({"status": "no_face", "message": "No face detected."}), 200
 
-        # Sightengine returns face features; we use their coordinates/attributes to create a signature
-        # Note: If using their specific 'Face Comparison' API, the logic varies slightly, 
-        # but for this flow, we store the first face's unique features.
-        new_descriptor = output['faces'][0]['features'] 
+        # Create a unique descriptor from the facial features provided by the API
+        # We use a combination of landmarks/features to create a stable 'fingerprint'
+        face = output['faces'][0]
+        new_descriptor = [
+            face['shape']['eye_left'][0], face['shape']['eye_left'][1],
+            face['shape']['eye_right'][0], face['shape']['eye_right'][1],
+            face['shape']['nose_tip'][0], face['shape']['nose_tip'][1],
+            face['attributes']['female'], face['attributes']['male']
+        ]
 
-        # 2. Match in MongoDB (Same logic as before)
+        # 2. Compare against our MongoDB database
         all_subjects = list(subjects_col.find({}))
         match_found = None
-        threshold = 0.5 
+        threshold = 0.15 # Adjusted for Sightengine landmark vectors
 
         for subject in all_subjects:
             dist = calculate_distance(new_descriptor, subject['descriptor'])
@@ -79,7 +95,10 @@ def submit_and_check():
 
         if match_found:
             subjects_col.update_one({"_id": match_found["_id"]}, {"$push": {"observations": current_sighting}})
-            return jsonify({"status": "match", "observations": match_found["observations"] + [current_sighting]})
+            return jsonify({
+                "status": "match", 
+                "observations": match_found["observations"] + [current_sighting]
+            })
         else:
             subjects_col.insert_one({
                 "name": data.get("name"),
@@ -89,10 +108,9 @@ def submit_and_check():
             return jsonify({"status": "no_match", "observations": [current_sighting]})
 
     except Exception as e:
-        print(f"API Error: {e}")
-        return jsonify({"error": "AI Service Unavailable"}), 500
+        print(f"System Error: {e}")
+        return jsonify({"error": "Processing failed"}), 500
 
-# Watchlist route remains the same...
 @app.route('/add-to-watchlist', methods=['POST'])
 def add_to_watchlist():
     data = request.json
