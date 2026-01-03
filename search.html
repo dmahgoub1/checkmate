@@ -8,13 +8,19 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
         .logo-small { width: 100px; margin-bottom: 10px; cursor: pointer; }
-        .slogan-small { color: #ff4b81; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
+        .slogan-small { color: #ff4b81; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 25px; }
         .container { width: 100%; max-width: 450px; background: #111; padding: 25px; border-radius: 25px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         #preview-img { width: 100%; border-radius: 15px; margin-bottom: 15px; display: none; border: 1px solid #333; }
         .file-label { display: block; text-align: center; padding: 20px; background: #1a1a1a; border: 2px dashed #444; border-radius: 15px; cursor: pointer; color: #ff4b81; font-weight: 700; margin-bottom: 20px; transition: 0.3s; }
         .file-label:hover { border-color: #ff4b81; background: #222; }
-        input, textarea { width: 100%; padding: 16px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-family: inherit; }
-        button { width: 100%; padding: 20px; border-radius: 15px; border: none; background: linear-gradient(135deg, #ff4b81, #bc2a8d); color: #fff; font-weight: 700; cursor: pointer; font-size: 1.1rem; margin-top: 10px; font-family: inherit; box-shadow: 0 4px 15px rgba(255, 75, 129, 0.3); }
+        
+        .field-label { display: block; font-size: 0.75rem; color: #666; margin: 15px 0 5px 5px; text-transform: uppercase; font-weight: 600; }
+        input, textarea { width: 100%; padding: 16px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-family: inherit; }
+        
+        .date-row { display: flex; gap: 10px; }
+        .date-group { flex: 1; }
+
+        button { width: 100%; padding: 20px; border-radius: 15px; border: none; background: linear-gradient(135deg, #ff4b81, #bc2a8d); color: #fff; font-weight: 700; cursor: pointer; font-size: 1.1rem; margin-top: 15px; font-family: inherit; box-shadow: 0 4px 15px rgba(255, 75, 129, 0.3); }
     </style>
 </head>
 <body>
@@ -26,11 +32,24 @@
         <label for="file-upload" class="file-label" id="label-text">📷 UPLOAD DATE'S PHOTO</label>
         <input type="file" id="file-upload" accept="image/*" style="display:none">
         
-        <input type="text" id="subject-name" placeholder="Name (if known)">
-        <input type="text" id="city" placeholder="City found in">
-        <textarea id="review" rows="3" placeholder="Add any dating history or context..."></textarea>
+        <input type="text" id="subject-name" placeholder="Name">
+        <input type="text" id="city" placeholder="City">
         
-        <button id="search-btn">RUN AI CHECK</button>
+        <div class="date-row">
+            <div class="date-group">
+                <span class="field-label">Dated From</span>
+                <input type="date" id="start-date">
+            </div>
+            <div class="date-group">
+                <span class="field-label">To</span>
+                <input type="date" id="end-date">
+            </div>
+        </div>
+
+        <span class="field-label">Optional Details</span>
+        <textarea id="review" rows="3" placeholder="Context or experience..."></textarea>
+        
+        <button id="search-btn">RUN CHECKMATE SEARCH</button>
     </div>
 
     <script>
@@ -43,7 +62,7 @@
                 imageBase64 = f.target.result;
                 document.getElementById('preview-img').src = imageBase64;
                 document.getElementById('preview-img').style.display = 'block';
-                document.getElementById('label-text').innerText = "✅ PHOTO LOADED";
+                document.getElementById('label-text').innerText = "✅ PHOTO READY";
             };
             reader.readAsDataURL(e.target.files[0]);
         };
@@ -52,7 +71,9 @@
             if (!imageBase64) return alert("Please upload a photo to continue.");
             
             const btn = document.getElementById('search-btn');
-            btn.innerText = "SEARCHING DATABASE...";
+            const dateContext = `Dated: ${document.getElementById('start-date').value} to ${document.getElementById('end-date').value}`;
+            
+            btn.innerText = "SEARCHING...";
             btn.disabled = true;
 
             try {
@@ -63,6 +84,7 @@
                         image_data: imageBase64,
                         name: document.getElementById('subject-name').value,
                         city: document.getElementById('city').value,
+                        date_context: dateContext,
                         review_text: document.getElementById('review').value,
                         submitter_email: sessionStorage.getItem('user_email') || 'anonymous'
                     })
@@ -71,8 +93,8 @@
                 sessionStorage.setItem('lastResult', JSON.stringify(result));
                 window.location.href = 'results.html';
             } catch (err) {
-                alert("Search failed. Check your connection.");
-                btn.innerText = "RUN AI CHECK";
+                alert("Connection error. Try again.");
+                btn.innerText = "RUN CHECKMATE SEARCH";
                 btn.disabled = false;
             }
         };
