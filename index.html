@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkmate App</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         
@@ -75,25 +74,22 @@
             line-height: 1.2; 
         }
 
-        #g_id_signin { 
-            margin: 10px 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .btn-guest { 
-            padding: 18px; 
+        .btn-enter { 
+            padding: 20px; 
             border-radius: 50px; 
-            border: 1px solid #333; 
-            background: transparent; 
-            color: #666; 
-            font-weight: 600; 
+            background: var(--brand); 
+            color: #fff; 
+            border: none; 
+            font-weight: 700; 
             cursor: pointer; 
             transition: 0.3s; 
             font-family: inherit; 
-            font-size: 0.85rem; 
+            font-size: 1.1rem; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(255, 75, 129, 0.3);
         }
-        .btn-guest:hover { color: #fff; border-color: var(--brand); }
+        .btn-enter:hover { transform: scale(1.02); background: #e04372; }
     </style>
 </head>
 <body>
@@ -106,34 +102,38 @@
             <table class="comparison-table">
                 <thead>
                     <tr>
-                        <th style="width: 65%;">Feature</th>
+                        <th style="width: 60%;">Feature</th>
                         <th style="text-align:center;">Guest</th>
                         <th style="text-align:center;">Signed-In</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Run AI Facial Search</td>
+                        <td>Upload photo of someone you are dating 
+                           <span class="feature-sub">See if they are dating someone else</span>
+                    </td>
                         <td style="text-align:center;" class="check">✓</td>
                         <td style="text-align:center;" class="check">✓</td>
                     </tr>
                     <tr>
-                        <td>View Dating History</td>
+                        <td>View Dating History
+                           <span class="feature-sub">See what others that have dated them have said</span>
+                        </td>
                         <td style="text-align:center;" class="check">✓</td>
                         <td style="text-align:center;" class="check">✓</td>
                     </tr>
                     <tr>
                         <td>
-                            Alerts if others upload your date
-                            <span class="feature-sub">Instant email if someone else spots them</span>
+                            Future Email Notifications
+                            <span class="feature-sub">Instant email if they are dating someone else</span>
                         </td>
                         <td style="text-align:center;" class="cross">✕</td>
                         <td style="text-align:center;" class="check">✓</td>
                     </tr>
                     <tr>
                         <td>
-                            Request to Connect
-                            <span class="feature-sub">Message original posters securely</span>
+                            Connect With Other Reviewers
+                            <span class="feature-sub">Message other users to have posted on the same person</span>
                         </td>
                         <td style="text-align:center;" class="cross">✕</td>
                         <td style="text-align:center;" class="check">✓</td>
@@ -141,45 +141,8 @@
                 </tbody>
             </table>
         </div>
-
-        <div id="g_id_onload" 
-             data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" 
-             data-callback="onSignIn" 
-             data-auto_prompt="false">
-        </div>
-        <div id="g_id_signin" 
-             data-type="standard" 
-             data-shape="pill" 
-             data-theme="filled_blue" 
-             data-text="continue_with" 
-             data-size="large" 
-             data-logo_alignment="left" 
-             data-width="350">
-        </div>
         
-        <button class="btn-guest" onclick="continueAsGuest()">Continue as Guest</button>
+        <button class="btn-enter" onclick="window.location.href='search.html'">CONTINUE</button>
     </div>
-
-    <script>
-        function onSignIn(response) {
-            try {
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const payload = JSON.parse(window.atob(base64));
-                
-                sessionStorage.setItem('user_mode', 'verified');
-                sessionStorage.setItem('user_email', payload.email);
-                window.location.href = 'search.html';
-            } catch (e) {
-                console.error("Login decoding failed", e);
-            }
-        }
-        
-        function continueAsGuest() {
-            sessionStorage.setItem('user_mode', 'guest');
-            sessionStorage.setItem('user_email', 'anonymous');
-            window.location.href = 'search.html';
-        }
-    </script>
 </body>
 </html>
