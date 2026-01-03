@@ -10,22 +10,26 @@
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px; }
         .logo { width: 160px; margin-bottom: 20px; }
-        h1 { font-weight: 700; font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
-        p { color: #a0a6b5; max-width: 350px; margin-bottom: 30px; font-weight: 300; }
+        h1 { font-weight: 700; font-size: 2.5rem; margin: 0; letter-spacing: -1px; line-height: 1.1; }
+        .tagline { color: var(--brand); font-weight: 600; font-size: 1.2rem; margin: 10px 0 25px 0; text-transform: uppercase; letter-spacing: 1px; }
+        p { color: #a0a6b5; max-width: 350px; margin-bottom: 30px; font-weight: 300; line-height: 1.5; }
         .auth-container { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
-        .btn-guest { padding: 18px; border-radius: 50px; border: 1px solid #333; background: #111; color: #fff; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .btn-guest { padding: 18px; border-radius: 50px; border: 1px solid #333; background: #111; color: #fff; font-weight: 700; cursor: pointer; transition: 0.3s; font-family: inherit; }
         .btn-guest:hover { background: #222; border-color: #555; }
     </style>
 </head>
 <body>
     <img src="logo.png" alt="Checkmate" class="logo">
     <h1>Checkmate</h1>
-    <p>Empowering safety through community dating history and AI facial search.</p>
+    <div class="tagline">Don't get played. Checkmate your date.</div>
+    <p>The community-powered safety search. Find dating history and verify your date using AI facial recognition.</p>
+    
     <div class="auth-container">
         <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="onSignIn" data-auto_prompt="false"></div>
         <div id="g_id_signin" data-type="standard" data-shape="pill" data-width="350"></div>
         <button class="btn-guest" onclick="continueAsGuest()">CONTINUE AS GUEST</button>
     </div>
+
     <script>
         function onSignIn(response) {
             const payload = JSON.parse(window.atob(response.credential.split('.')[1]));
