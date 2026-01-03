@@ -1,24 +1,40 @@
-# 1. Use a lightweight Python image
+# Use a stable Python base
 FROM python:3.9-slim
 
-# 2. Install the C++ compilers needed for dlib and face_recognition
-RUN apt-get update && apt-get install -y \
+# Prevent interactive prompts during the build process
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Step 1: Install Build Essentials
+# Splitting these helps IBM cache the heavy system downloads
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 2: Install Math & X11 Libraries
+# Required for dlib's linear algebra and image processing
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     liblapack-dev \
     libx11-6 \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Set the directory in the container
+# Step 3: Pre-install dlib
+# We do this BEFORE copying your code so that changes to index.html 
+# do not trigger a 20-minute dlib rebuild.
+RUN pip install --no-cache-dir dlib face-recognition
+
+# Step 4: Set up the Application Directory
 WORKDIR /app
 
-# 4. Install python dependencies
+# Step 5: Copy requirements and install
+# This handles any other libraries in your requirements.txt
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Copy your code into the container
+# Step 6: Copy the rest of your project (including index.html)
 COPY . .
 
-# 6. Start the app
+# Step 7: Final Command
 CMD ["python", "app.py"]
