@@ -92,7 +92,6 @@
         }
         .btn-enter:hover { transform: scale(1.02); background: #e04372; }
 
-        /* Styling for the Google button container to center it */
         #g_id_signin {
             display: flex;
             justify-content: center;
@@ -172,14 +171,13 @@
 
     <script>
         function handleCredentialResponse(response) {
-            // Decode the JWT to get user info
             const responsePayload = parseJwt(response.credential);
             
-            // Save email to session for the results page
+            // Critical for notification feature: Save email and pref
             sessionStorage.setItem('user_email', responsePayload.email);
             sessionStorage.setItem('user_name', responsePayload.name);
+            sessionStorage.setItem('email_notif_enabled', 'true');
             
-            // Forward to search page after successful login
             window.location.href = 'search.html';
         }
 
