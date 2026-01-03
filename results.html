@@ -3,114 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkmate - Results</title>
+    <title>Checkmate Results</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        :root { --brand: #ff4b81; --dark: #000; --card: #111; }
-        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .header-logo { width: 120px; margin: 20px 0 10px 0; cursor: pointer; }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        :root { --brand: #ff4b81; }
+        body { font-family: 'Poppins', sans-serif; background: #000; color: #fff; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .results-container { width: 100%; max-width: 500px; }
-        .profile-card { background: var(--card); border-radius: 25px; padding: 25px; border: 1px solid #222; margin-bottom: 20px; }
-        .obs-card { background: #1a1a1a; margin-top: 20px; padding: 15px; border-radius: 15px; border: 1px solid #333; }
-        .obs-image { width: 100%; border-radius: 10px; margin-bottom: 12px; border: 1px solid #444; object-fit: cover; max-height: 300px; }
-        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; font-size: 0.9rem; transition: 0.3s;}
-        .btn-notify { background: #222; color: #fff; border: 1px solid #333; }
+        .obs-card { background: #111; border: 1px solid #222; border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .obs-image { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
         .btn-contact { background: var(--brand); color: #fff; }
-        .btn-disabled { background: #1a1a1a; color: #444; border: 1px solid #222; cursor: not-allowed; }
-        .btn-new-search { background: transparent; color: #888; border: 1px solid #333; margin-bottom: 20px; }
-        #login-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; align-items:center; justify-content:center; }
-        .modal-content { background: var(--card); padding: 40px; border-radius: 30px; text-align: center; border: 1px solid #333; max-width: 320px; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
-        .badge-match { background: #ff4b8122; color: var(--brand); border: 1px solid var(--brand); }
-        .badge-new { background: #222; color: #888; border: 1px solid #444; }
+        .btn-disabled { background: #222; color: #555; cursor: not-allowed; border: 1px solid #333; }
+        .badge { background: #ff4b8122; color: var(--brand); padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; border: 1px solid var(--brand); display: inline-block; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <img src="logo.png" class="header-logo" onclick="window.location.href='/'">
-    <button class="btn-action btn-new-search" onclick="window.location.href='search.html'">← NEW SEARCH</button>
-
+    <img src="logo.png" style="width:80px; margin-bottom:20px; cursor:pointer;" onclick="window.location.href='/'">
+    <button style="background:none; border:1px solid #333; color:#888; padding:10px 20px; border-radius:50px; cursor:pointer; margin-bottom:20px; font-family: inherit;" onclick="window.location.href='search.html'">← START NEW SEARCH</button>
     <div class="results-container" id="results-display"></div>
-
-    <div id="login-modal">
-        <div class="modal-content">
-            <h3>Sign In to Proceed</h3>
-            <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="handleModalLogin" data-auto_prompt="false"></div>
-            <div class="g_id_signin" data-type="standard"></div>
-            <button onclick="closeModal()" style="background:none; border:none; color:#555; margin-top:20px; cursor:pointer;">Cancel</button>
-        </div>
-    </div>
 
     <script>
         const result = JSON.parse(sessionStorage.getItem('lastResult'));
         const container = document.getElementById('results-display');
 
-        function renderResults() {
+        function render() {
+            if (!result || !result.observations) { container.innerHTML = "<h2>No results found.</h2>"; return; }
             const userMode = sessionStorage.getItem('user_mode');
-            if (!result || !result.observations) { 
-                container.innerHTML = "<h2>No data.</h2>"; 
-                return; 
-            }
+            const displayName = result.user_query?.name || "Unknown";
 
-            const displayName = (result.user_query && result.user_query.name) ? result.user_query.name : "Subject";
-            let html = `
-                <div class="profile-card">
-                    <span class="badge ${result.status === 'match' ? 'badge-match' : 'badge-new'}">
-                        ${result.status === 'match' ? 'Community Match' : 'New Entry'}
-                    </span>
-                    <h1>${displayName}</h1>
-            `;
+            let html = `<div style="text-align:center; margin-bottom:30px;"><span class="badge">${result.status === 'match' ? 'MATCH FOUND' : 'NEW PROFILE CREATED'}</span><h1>${displayName}</h1><p>${result.observations.length} total sighting(s)</p></div>`;
 
             if (userMode === 'verified') {
-                html += `<button class="btn-action btn-notify" onclick="toggleWatchlist('${displayName}')">🔔 Notify me of future matches</button>`;
+                html += `<button class="btn-action" style="background:#222; color:#fff; margin-bottom:20px;" onclick="addWatch('${displayName}')">🔔 Email me if searched again</button>`;
             } else {
-                html += `<button class="btn-action btn-notify" onclick="openModal()">🔓 Sign In for Alerts</button>`;
+                html += `<button class="btn-action" style="background:#222; color:#888; margin-bottom:20px;" onclick="alert('Sign in required for alerts.')">🔓 Sign in for email alerts</button>`;
             }
 
-            const obsList = [...result.observations].reverse();
-            obsList.forEach(obs => {
+            [...result.observations].reverse().forEach(obs => {
                 const isAnon = obs.submitter === "anonymous";
                 html += `
                     <div class="obs-card">
                         <img src="${obs.image}" class="obs-image">
-                        <small style="color:var(--brand); font-weight:700;">SIGHTED: ${obs.submitted_on} (${obs.city})</small>
-                        <p style="margin:10px 0; font-size:0.85rem;">"${obs.text || 'No description.'}"</p>
-                        
+                        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                            <small style="color:var(--brand); font-weight:700;">${obs.submitted_on}</small>
+                            <span style="font-size:0.7rem; color:#555;">${obs.city}</span>
+                        </div>
+                        <p style="margin:10px 0; font-size:0.9rem; border-top: 1px solid #222; padding-top: 10px;">"${obs.text || 'No description.'}"</p>
                         ${isAnon ? 
-                            `<button class="btn-action btn-disabled" disabled>Submitted anonymously, cannot request connect</button>` :
+                            `<button class="btn-action btn-disabled" disabled>Submitted anonymously, can not request connect</button>` :
                             `<button class="btn-action btn-contact" onclick="requestConnect('${obs.submitter}')">Request to Connect</button>`
                         }
                     </div>
                 `;
             });
-
-            container.innerHTML = html + "</div><button class='btn-action btn-new-search' onclick='window.location.href=\"search.html\"'>START ANOTHER SEARCH</button>";
+            container.innerHTML = html;
         }
 
-        function openModal() { document.getElementById('login-modal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('login-modal').style.display = 'none'; }
-        
-        function handleModalLogin(response) {
-            const payload = JSON.parse(window.atob(response.credential.split('.')[1]));
-            sessionStorage.setItem('user_mode', 'verified');
-            sessionStorage.setItem('user_email', payload.email);
-            closeModal(); renderResults();
+        async function requestConnect(target) {
+            if (sessionStorage.getItem('user_mode') !== 'verified') return alert("Please sign in to connect.");
+            const resp = await fetch('/request-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_email: target, requester_email: sessionStorage.getItem('user_email') })
+            });
+            if (resp.ok) alert("Connection request sent to the original poster.");
         }
 
-        async function requestConnect(targetEmail) {
-            if (sessionStorage.getItem('user_mode') !== 'verified') {
-                openModal();
-                return;
-            }
-            alert("Connection request sent to the original submitter. They will receive your email address to start a secure chat.");
+        async function addWatch(name) {
+            await fetch('/add-to-watchlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sessionStorage.getItem('user_email'), subject_name: name })
+            });
+            alert("Success! You will be notified of future matches.");
         }
 
-        async function toggleWatchlist(name) {
-            const email = sessionStorage.getItem('user_email');
-            await fetch('/add-to-watchlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, subject_name: name }) });
-            alert("Success! We'll email you if this person is searched again.");
-        }
-        renderResults();
+        render();
     </script>
 </body>
 </html>

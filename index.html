@@ -3,47 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkmate - Who Am I Dating?</title>
+    <title>Checkmate App</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px; }
-        .logo { width: 180px; margin-bottom: 30px; }
-        h1 { font-weight: 700; font-size: 2.8rem; margin: 0 0 10px 0; letter-spacing: -1.5px; line-height: 1.1; }
-        p { color: #a0a6b5; max-width: 380px; margin-bottom: 40px; font-size: 1rem; line-height: 1.6; }
-        .comparison-table { width: 100%; max-width: 350px; margin-bottom: 40px; border-collapse: collapse; }
-        .comparison-table th { padding: 12px; color: #555; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #222; }
-        .comparison-table td { padding: 15px 10px; border-bottom: 1px solid #111; font-size: 0.9rem; }
-        .feature-name { text-align: left; color: #ccc; }
-        .check { color: var(--brand); font-weight: bold; }
-        .cross { color: #333; }
-        .auth-container { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 15px; }
-        #g_id_signin { display: flex; justify-content: center; }
-        .btn-guest { padding: 18px; border-radius: 15px; border: 1px solid #333; background: #111; color: #fff; font-weight: 700; cursor: pointer; font-size: 1rem; transition: 0.3s; }
-        .btn-guest:hover { border-color: var(--brand); }
+        .logo { width: 160px; margin-bottom: 20px; }
+        h1 { font-weight: 700; font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
+        p { color: #a0a6b5; max-width: 350px; margin-bottom: 30px; font-weight: 300; }
+        .auth-container { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
+        .btn-guest { padding: 18px; border-radius: 50px; border: 1px solid #333; background: #111; color: #fff; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .btn-guest:hover { background: #222; border-color: #555; }
     </style>
 </head>
 <body>
     <img src="logo.png" alt="Checkmate" class="logo">
-    <h1>Who Am I<br>Dating?</h1>
-    <p>Securely search and share dating experiences to keep the community safe.</p>
-    <table class="comparison-table">
-        <thead><tr><th></th><th>Guest</th><th>Signed In</th></tr></thead>
-        <tbody>
-            <tr><td class="feature-name">Search Database</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td></tr>
-            <tr><td class="feature-name">View Records</td><td><span class="check">✓</span></td><td><span class="check">✓</span></td></tr>
-            <tr><td class="feature-name">Email Alerts</td><td><span class="cross">✕</span></td><td><span class="check">✓</span></td></tr>
-            <tr><td class="feature-name">Contact Users</td><td><span class="cross">✕</span></td><td><span class="check">✓</span></td></tr>
-        </tbody>
-    </table>
+    <h1>Checkmate</h1>
+    <p>Empowering safety through community dating history and AI facial search.</p>
     <div class="auth-container">
         <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="onSignIn" data-auto_prompt="false"></div>
-        <div id="g_id_signin" class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="pill" data-width="350"></div>
+        <div id="g_id_signin" data-type="standard" data-shape="pill" data-width="350"></div>
         <button class="btn-guest" onclick="continueAsGuest()">CONTINUE AS GUEST</button>
     </div>
     <script>
-        window.onload = function() { sessionStorage.clear(); };
         function onSignIn(response) {
             const payload = JSON.parse(window.atob(response.credential.split('.')[1]));
             sessionStorage.setItem('user_mode', 'verified');
