@@ -9,9 +9,10 @@
         :root { --brand: #ff4b81; --dark: #000; --card: #111; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        .header { text-align: center; margin-bottom: 30px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .logo { width: 120px; margin-bottom: 10px; }
         .slogan { color: var(--brand); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
-        h2 { margin: 10px 0; font-size: 1.8rem; }
+        h2 { margin: 5px 0 15px 0; font-size: 1.5rem; }
 
         .status-banner { width: 100%; max-width: 500px; padding: 15px; border-radius: 12px; text-align: center; font-weight: 700; margin-bottom: 20px; }
         .match { background: rgba(255, 75, 129, 0.2); border: 1px solid var(--brand); color: var(--brand); }
@@ -25,30 +26,31 @@
         .obs-img { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
         .obs-text { font-size: 0.9rem; color: #aaa; line-height: 1.5; font-style: italic; }
 
-        .actions { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .actions { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
         .btn { padding: 18px; border-radius: 50px; border: none; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 0.9rem; transition: 0.3s; }
         .btn-primary { background: var(--brand); color: #fff; }
         .btn-secondary { background: transparent; border: 1px solid #333; color: #888; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        
-        .watchlist-note { font-size: 0.75rem; color: #555; text-align: center; margin-top: 15px; }
+        input[type="email"] { padding: 15px; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; margin-bottom: 5px; font-family: inherit; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="slogan">Checkmate Results</div>
-        <h2 id="subject-display">Searching...</h2>
+        <img src="logo.png" alt="Checkmate" class="logo">
+        <div class="slogan">Scan Results</div>
+        <h2 id="subject-display">Processing Records...</h2>
     </div>
 
-    <div id="status-box" class="status-banner">Checking Database...</div>
+    <div id="status-box" class="status-banner">Checking Local AI Models...</div>
 
     <div id="results-container"></div>
 
     <div class="actions">
-        <button class="btn btn-primary" id="watchlist-btn">NOTIFY ME OF FUTURE SIGHTINGS</button>
-        <button class="btn btn-secondary" onclick="window.location.href='search.html'">NEW SEARCH</button>
-        <p class="watchlist-note" id="watchlist-msg">Signing in via Google enables instant email alerts if this person is uploaded again.</p>
+        <div id="watchlist-area" style="display:flex; flex-direction:column; gap:5px;">
+            <input type="email" id="alert-email" placeholder="Enter email for future alerts">
+            <button class="btn btn-primary" id="watchlist-btn">ACTIVATE CHEATER TRAP</button>
+        </div>
+        <button class="btn btn-secondary" onclick="window.location.href='search.html'">NEW SCAN</button>
     </div>
 
     <script>
@@ -65,18 +67,19 @@
         if (resultData.status === 'match') {
             statusBox.className = 'status-banner match';
             statusBox.innerText = '⚠️ TIMELINE OVERLAP DETECTED';
-            subjectDisplay.innerText = `Records for ${resultData.user_query.name || 'this person'}`;
+            subjectDisplay.innerText = `Matched: ${resultData.user_query.name}`;
         } else {
             statusBox.className = 'status-banner no-match';
             statusBox.innerText = 'NO PRIOR RECORDS FOUND';
-            subjectDisplay.innerText = `First report for ${resultData.user_query.name || 'this person'}`;
+            subjectDisplay.innerText = `New Entry: ${resultData.user_query.name}`;
         }
 
-        // Render Observations (The Timeline)
-        resultData.observations.reverse().forEach((obs, index) => {
+        // Render Timeline of Sightings
+        resultData.observations.reverse().forEach((obs) => {
             const card = document.createElement('div');
             card.className = 'observation-card';
             
+            // Show connect button if user is not the original poster
             const showConnect = (obs.submitter !== 'anonymous' && obs.submitter !== sessionStorage.getItem('user_email'));
 
             card.innerHTML = `
@@ -85,21 +88,20 @@
                         <div class="obs-date">${obs.date}</div>
                         <div class="obs-city">${obs.city}</div>
                     </div>
-                    <div style="font-size:0.7rem; color:#444;">Reported: ${obs.submitted_on}</div>
+                    <div style="font-size:0.7rem; color:#444;">ID: ${resultData.user_query.name}</div>
                 </div>
                 <img src="${obs.image}" class="obs-img">
-                <p class="obs-text">"${obs.text || 'No additional details provided.'}"</p>
+                <p class="obs-text">"${obs.text || 'No description provided.'}"</p>
                 ${showConnect ? `<button class="btn btn-secondary" style="width:100%; padding: 10px; margin-top:10px; font-size:0.75rem;" onclick="connect('${obs.submitter}')">REQUEST TO COMPARE NOTES</button>` : ''}
             `;
             container.appendChild(card);
         });
 
-        // Watchlist Logic
+        // Watchlist / Cheater Trap Logic
         document.getElementById('watchlist-btn').onclick = async () => {
-            const email = sessionStorage.getItem('user_email');
+            const email = document.getElementById('alert-email').value || sessionStorage.getItem('user_email');
             if (!email || email === 'anonymous') {
-                alert("Please sign in with Google on the home page to enable email alerts.");
-                return;
+                return alert("Please enter an email address to receive alerts.");
             }
 
             const resp = await fetch('/add-to-watchlist', {
@@ -107,24 +109,20 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     email: email,
-                    subject_name: resultData.user_query.name || 'Unnamed Subject'
+                    subject_name: resultData.user_query.name
                 })
             });
             if (resp.ok) {
-                document.getElementById('watchlist-btn').innerText = "✅ WATCHLIST ACTIVE";
-                document.getElementById('watchlist-msg').innerText = "We will email you the moment someone else uploads a photo of this person.";
+                alert("Alerts active. You will be emailed if this person is uploaded again.");
+                document.getElementById('watchlist-btn').innerText = "✅ ALERTS ACTIVE";
             }
         };
 
-        // Connection Logic
         async function connect(targetEmail) {
-            const myEmail = sessionStorage.getItem('user_email');
-            if (!myEmail || myEmail === 'anonymous') return alert("Sign in to connect with other users.");
+            const myEmail = prompt("Enter your email so the other user can contact you:");
+            if (!myEmail) return;
             
-            const btn = event.target;
-            btn.innerText = "SENDING REQUEST...";
-            
-            const resp = await fetch('/request-connection', {
+            await fetch('/request-connection', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -132,8 +130,7 @@
                     requester_email: myEmail
                 })
             });
-            btn.innerText = "REQUEST SENT";
-            btn.disabled = true;
+            alert("Your request to connect has been sent.");
         }
     </script>
 </body>

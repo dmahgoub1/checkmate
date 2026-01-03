@@ -2,5 +2,8 @@ flask
 flask-cors
 pymongo
 requests
+pillow
 numpy
-gunicorn
+cmake
+dlib
+face_recognition
