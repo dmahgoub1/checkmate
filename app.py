@@ -1,125 +1,87 @@
 import os
-import base64
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from flask import Flask, request, jsonify, render_template
+from pymongo import MongoClient
 import face_recognition
 import numpy as np
-import smtplib
-from io import BytesIO
-from PIL import Image
-from email.mime.text import MIMEText
-from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from pymongo import MongoClient
+import cv2
 
-app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)
+app = Flask(__name__)
 
-# --- CONFIG ---
-MONGO_URI = os.environ.get("MONGO_URI")
-EMAIL_USER = os.environ.get("EMAIL_USER")
-EMAIL_PASS = os.environ.get("EMAIL_PASS")
-MODELS_DIR = "models"
+# --- CONFIGURATION (via Environment Variables) ---
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/checkmate")
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASS = os.environ.get("SMTP_PASS")
+ALERTS_EMAIL = os.environ.get("ALERTS_EMAIL")
 
+# --- DATABASE SETUP ---
 client = MongoClient(MONGO_URI)
-db = client.checkmate_db
-subjects_col = db.subjects
-watchers_col = db.watchers
+db = client.get_default_database()
+faces_collection = db.known_faces
 
-known_face_encodings = []
-known_face_names = []
-
-def load_local_models():
-    if not os.path.exists(MODELS_DIR):
-        os.makedirs(MODELS_DIR)
+def send_alert_email(name):
+    """Sends an email notification when a face match is found."""
+    if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]):
+        print("Email credentials missing. Skipping alert.")
         return
-    for filename in os.listdir(MODELS_DIR):
-        if filename.endswith((".jpg", ".png", ".jpeg")):
-            path = os.path.join(MODELS_DIR, filename)
-            # RAM SAVE: Resize models at startup too
-            img = Image.open(path).convert('RGB')
-            img.thumbnail((600, 600))
-            image_array = np.array(img)
-            encodings = face_recognition.face_encodings(image_array)
-            if len(encodings) > 0:
-                known_face_encodings.append(encodings[0])
-                known_face_names.append(os.path.splitext(filename)[0])
 
-load_local_models()
+    msg = MIMEMultipart()
+    msg['From'] = SMTP_USER
+    msg['To'] = ALERTS_EMAIL
+    msg['Subject'] = f"ALERT: {name} Identified"
+    
+    body = f"The Checkmate Security system has identified: {name}."
+    msg.attach(MIMEText(body, 'plain'))
 
-def send_email(to_email, subject, body):
-    if not EMAIL_USER or not EMAIL_PASS: return False
     try:
-        msg = MIMEText(body)
-        msg['Subject'] = subject
-        msg['From'] = EMAIL_USER
-        msg['To'] = to_email
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_USER, EMAIL_PASS)
-            server.send_message(msg)
-        return True
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        print(f"Alert email sent for {name}")
     except Exception as e:
-        print(f"Email error: {e}")
-        return False
+        print(f"Email failed: {e}")
 
 @app.route('/')
-def serve_index(): return send_from_directory(app.static_folder, 'index.html')
+def index():
+    return render_template('index.html')
 
-@app.route('/search.html')
-def serve_search(): return send_from_directory(app.static_folder, 'search.html')
+@app.route('/recognize', methods=['POST'])
+def recognize_face():
+    """Receives image data, compares with DB, and triggers alerts."""
+    file = request.files['image']
+    email_enabled = request.form.get('email_enabled') == 'true'
+    
+    # Load the uploaded image
+    img = face_recognition.load_image_file(file)
+    unknown_encodings = face_recognition.face_encodings(img)
 
-@app.route('/results.html')
-def serve_results(): return send_from_directory(app.static_folder, 'results.html')
+    if not unknown_encodings:
+        return jsonify({"status": "no_face_detected"})
 
-@app.route('/submit-and-check', methods=['POST'])
-def submit_and_check():
-    try:
-        data = request.json
-        image_b64 = data.get("image_data")
-        header, encoded = image_b64.split(",", 1) if "," in image_b64 else ("", image_b64)
-        image_bytes = base64.b64decode(encoded)
+    # Fetch known faces from MongoDB
+    known_faces_data = list(faces_collection.find())
+    known_encodings = [np.array(f['encoding']) for f in known_faces_data]
+    known_names = [f['name'] for f in known_faces_data]
 
-        # RAM SAVE: Resize the uploaded image immediately
-        img = Image.open(BytesIO(image_bytes)).convert('RGB')
-        img.thumbnail((600, 600)) # Reduce size to save memory
-        unknown_image = np.array(img)
+    # Compare
+    matches = face_recognition.compare_faces(known_encodings, unknown_encodings[0])
+    name = "Unknown"
 
-        unknown_encodings = face_recognition.face_encodings(unknown_image)
-        if len(unknown_encodings) == 0:
-            return jsonify({"error": "No face detected"}), 400
+    if True in matches:
+        first_match_index = matches.index(True)
+        name = known_names[first_match_index]
         
-        uploaded_encoding = unknown_encodings[0]
-        matches = face_recognition.compare_faces(known_face_encodings, uploaded_encoding, tolerance=0.6)
-        match_name = None
+        if email_enabled:
+            send_alert_email(name)
 
-        if True in matches:
-            match_name = known_face_names[matches.index(True)]
-
-        current_sighting = {
-            "city": data.get("city") or "Unknown",
-            "date": data.get("date_context") or "Unknown",
-            "submitted_on": datetime.now().strftime("%b %d, %Y"),
-            "text": data.get("review_text", ""),
-            "image": image_b64,
-            "submitter": data.get("submitter_email", "anonymous")
-        }
-
-        if match_name:
-            match_data = subjects_col.find_one({"name": match_name})
-            if match_data:
-                subjects_col.update_one({"_id": match_data["_id"]}, {"$push": {"observations": current_sighting}})
-                watchers = watchers_col.find({"watching_names": match_name})
-                for w in watchers:
-                    send_email(w['email'], f"CHECKMATE ALERT: {match_name}", f"New sighting in {current_sighting['city']}.")
-                return jsonify({"status": "match", "observations": match_data["observations"] + [current_sighting], "user_query": {"name": match_name}})
-
-        new_name = data.get("name") or f"Subject_{datetime.now().strftime('%H%M%S')}"
-        subjects_col.insert_one({"name": new_name, "reference_image": image_b64, "observations": [current_sighting]})
-        return jsonify({"status": "no_match", "observations": [current_sighting], "user_query": {"name": new_name}})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"status": "success", "match": name})
 
 if __name__ == '__main__':
-    # IBM Code Engine uses the PORT environment variable
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    # Using 8080 for IBM Cloud compatibility
+    app.run(host='0.0.0.0', port=8080)

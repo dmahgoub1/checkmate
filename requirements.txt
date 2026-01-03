@@ -1,6 +1,13 @@
-flask
-flask-cors
+# Face Recognition & Image Processing
+dlib
+face_recognition
 numpy
 opencv-python-headless
-pillow
-requests
+
+# Database & Backend
+pymongo
+flask
+gunicorn
+
+# Utilities
+python-dotenv

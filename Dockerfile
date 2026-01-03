@@ -1,40 +1,31 @@
-# Use a stable Python base
+# Step 1: Use a Python base image
 FROM python:3.9-slim
 
-# Prevent interactive prompts during the build process
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-
-# Step 1: Install Build Essentials
-# Splitting these helps IBM cache the heavy system downloads
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Step 2: Install system dependencies required for dlib and OpenCV
+RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
-    && rm -rf /var/lib/apt/lists/*
-
-# Step 2: Install Math & X11 Libraries
-# Required for dlib's linear algebra and image processing
-RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     liblapack-dev \
-    libx11-6 \
+    libx11-dev \
+    libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
-# Step 3: Pre-install dlib
-# We do this BEFORE copying your code so that changes to index.html 
-# do not trigger a 20-minute dlib rebuild.
-RUN pip install --no-cache-dir dlib face-recognition
-
-# Step 4: Set up the Application Directory
+# Step 3: Set the working directory
 WORKDIR /app
 
-# Step 5: Copy requirements and install
-# This handles any other libraries in your requirements.txt
+# Step 4: Copy requirements first (to leverage Docker caching)
 COPY requirements.txt .
+
+# Step 5: Install Python dependencies
+# This is where pymongo and dlib get installed
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Step 6: Copy the rest of your project (including index.html)
+# Step 6: Copy the rest of your application code
 COPY . .
 
-# Step 7: Final Command
-CMD ["python", "app.py"]
+# Step 7: Expose the port your app runs on (usually 8080 for IBM)
+EXPOSE 8080
+
+# Step 8: Start the application using Gunicorn for production stability
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
