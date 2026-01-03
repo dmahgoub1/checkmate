@@ -9,25 +9,76 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 20px; }
-        .logo { width: 160px; margin-bottom: 20px; }
-        h1 { font-weight: 700; font-size: 2.5rem; margin: 0; letter-spacing: -1px; line-height: 1.1; }
-        .tagline { color: var(--brand); font-weight: 600; font-size: 1.2rem; margin: 10px 0 25px 0; text-transform: uppercase; letter-spacing: 1px; }
-        p { color: #a0a6b5; max-width: 350px; margin-bottom: 30px; font-weight: 300; line-height: 1.5; }
-        .auth-container { width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
-        .btn-guest { padding: 18px; border-radius: 50px; border: 1px solid #333; background: #111; color: #fff; font-weight: 700; cursor: pointer; transition: 0.3s; font-family: inherit; }
-        .btn-guest:hover { background: #222; border-color: #555; }
+        .logo { width: 140px; margin-bottom: 30px; }
+        
+        .tagline { color: #ffffff; font-weight: 700; font-size: 1.6rem; margin: 0 0 40px 0; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; max-width: 400px; }
+        
+        .auth-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; }
+        
+        .comparison-box { background: #111; border: 1px solid #222; border-radius: 20px; padding: 25px; margin-bottom: 25px; text-align: left; }
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .comparison-table th { padding-bottom: 15px; border-bottom: 1px solid #333; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .comparison-table td { padding: 12px 0; border-bottom: 1px solid #222; vertical-align: middle; }
+        .check { color: var(--brand); font-weight: bold; font-size: 1.1rem; }
+        .cross { color: #333; font-size: 1.1rem; }
+        .feature-sub { display: block; font-size: 0.7rem; color: #555; margin-top: 2px; line-height: 1.2; }
+
+        .btn-guest { padding: 18px; border-radius: 50px; border: 1px solid #333; background: transparent; color: #666; font-weight: 600; cursor: pointer; transition: 0.3s; font-family: inherit; font-size: 0.85rem; margin-top: 10px; }
+        .btn-guest:hover { color: #fff; border-color: #ff4b81; }
+        
+        #g_id_signin { display: flex; justify-content: center; transform: scale(1.05); }
     </style>
 </head>
 <body>
     <img src="logo.png" alt="Checkmate" class="logo">
-    <h1>Checkmate</h1>
-    <div class="tagline">Don't get played. Checkmate your date.</div>
-    <p>The community-powered safety search. Find dating history and verify your date using AI facial recognition.</p>
+    
+    <div class="tagline">DON'T GET PLAYED.<br>CHECKMATE YOUR DATE.</div>
     
     <div class="auth-container">
+        <div class="comparison-box">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">Feature</th>
+                        <th style="text-align:center;">Guest</th>
+                        <th style="text-align:center;">Signed-In</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Run AI Facial Search</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>View Dating History</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Alerts if others upload your date
+                            <span class="feature-sub">Get notified if this person is spotted again</span>
+                        </td>
+                        <td style="text-align:center;" class="cross">✕</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Request to Connect
+                            <span class="feature-sub">Securely chat with other submitters</span>
+                        </td>
+                        <td style="text-align:center;" class="cross">✕</td>
+                        <td style="text-align:center;" class="check">✓</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <div id="g_id_onload" data-client_id="1038013306898-8euhk5m8hhu06p1eraqr8rjeh0nma1qa.apps.googleusercontent.com" data-callback="onSignIn" data-auto_prompt="false"></div>
-        <div id="g_id_signin" data-type="standard" data-shape="pill" data-width="350"></div>
-        <button class="btn-guest" onclick="continueAsGuest()">CONTINUE AS GUEST</button>
+        <div id="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_blue" data-text="continue_with" data-size="large" data-logo_alignment="left" data-width="350"></div>
+        
+        <button class="btn-guest" onclick="continueAsGuest()">Continue as Guest (Limited Access)</button>
     </div>
 
     <script>
@@ -39,6 +90,7 @@
         }
         function continueAsGuest() {
             sessionStorage.setItem('user_mode', 'guest');
+            sessionStorage.setItem('user_email', 'anonymous');
             window.location.href = 'search.html';
         }
     </script>
