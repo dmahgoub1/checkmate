@@ -112,7 +112,7 @@
 
                 const result = await response.json();
                 sessionStorage.setItem('lastResult', JSON.stringify(result));
-                window.location.href = 'results.html';
+                window.location.href = 'results';
             } catch (err) {
                 console.error(err);
                 alert("Scan failed. Ensure your AI server is running and CORS is enabled.");
