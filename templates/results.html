@@ -8,75 +8,38 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        
         .logo { width: 140px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
         .header { text-align: center; margin-bottom: 30px; }
         .slogan { color: var(--brand); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
-        
-        .status-banner { 
-            width: 100%; max-width: 500px; padding: 20px; border-radius: 15px; 
-            font-weight: 700; margin-bottom: 25px; text-align: center; 
-            text-transform: uppercase; letter-spacing: 1px;
-        }
+        .status-banner { width: 100%; max-width: 500px; padding: 20px; border-radius: 15px; font-weight: 700; margin-bottom: 25px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
         .match { background: rgba(255, 75, 129, 0.2); border: 1px solid var(--brand); color: var(--brand); }
         .no-match { background: #1a1a1a; border: 1px solid #333; color: #888; }
-
-        .overlap-alert { 
-            background: rgba(255, 0, 0, 0.3); border: 2px solid #ff4444; color: #fff; 
-            padding: 15px; border-radius: 12px; width: 100%; max-width: 500px; 
-            margin-bottom: 20px; text-align: center; font-weight: 600; 
-        }
-
-        .result-card { 
-            background: #111; border: 1px solid #222; border-radius: 20px; 
-            width: 100%; max-width: 500px; padding: 25px; box-sizing: border-box; margin-bottom: 20px;
-        }
+        .overlap-alert { background: rgba(255, 0, 0, 0.3); border: 2px solid #ff4444; color: #fff; padding: 15px; border-radius: 12px; width: 100%; max-width: 500px; margin-bottom: 20px; text-align: center; font-weight: 600; }
+        .result-card { background: #111; border: 1px solid #222; border-radius: 20px; width: 100%; max-width: 500px; padding: 25px; box-sizing: border-box; margin-bottom: 20px; }
+        .history-photo { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
         .detail-label { color: #555; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
         .detail-value { font-size: 1.1rem; margin-bottom: 15px; }
-
-        /* Contact Section Styles */
         .btn-contact { background: #fff; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 10px; transition: 0.3s; }
         .btn-contact:hover { background: var(--brand); color: #fff; }
-        
         .contact-box { display: none; margin-top: 15px; background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; }
         .contact-textarea { width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-family: inherit; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
         .btn-send-request { background: var(--brand); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; }
-
-        .btn-action { 
-            background: var(--brand); color: #fff; border: none; padding: 18px; 
-            border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%;
-            max-width: 500px; margin-top: 10px; text-transform: uppercase; 
-            letter-spacing: 1px; transition: 0.3s;
-        }
+        .btn-action { background: var(--brand); color: #fff; border: none; padding: 18px; border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%; max-width: 500px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .btn-secondary { background: #222; }
     </style>
 </head>
 <body>
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Checkmate" class="logo">
-
-    <div class="header">
-        <div class="slogan">Scan Results</div>
-        <h2 id="result-title">Processing...</h2>
-    </div>
-
+    <div class="header"><div class="slogan">Scan Results</div><h2 id="result-title">Processing...</h2></div>
     <div id="status-box" class="status-banner">Checking Records...</div>
-
     <div id="overlap-container"></div>
-
     <div class="result-card">
-        <div class="detail-label">Name</div>
-        <div id="display-name" class="detail-value">--</div>
-
-        <div class="detail-label">Dates (Start and End)</div>
-        <div id="display-timeline" class="detail-value">--</div>
-
-        <div class="detail-label">City</div>
-        <div id="display-city" class="detail-value">--</div>
+        <div class="detail-label">Name</div><div id="display-name" class="detail-value">--</div>
+        <div class="detail-label">Dates (Start and End)</div><div id="display-timeline" class="detail-value">--</div>
+        <div class="detail-label">City</div><div id="display-city" class="detail-value">--</div>
     </div>
-
     <h3 style="color: var(--brand); margin-top: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Historical Database Records</h3>
     <div id="history-container" style="width: 100%; max-width: 500px;"></div>
-
     <button class="btn-action" onclick="window.location.href='/search'">Run New Scan</button>
     <button class="btn-action btn-secondary" onclick="window.location.href='/'">Return Home</button>
 
@@ -85,11 +48,9 @@
             const form = document.getElementById(`contact-form-${index}`);
             form.style.display = form.style.display === 'block' ? 'none' : 'block';
         }
-
         async function sendContactRequest(targetName, index) {
             const message = document.getElementById(`msg-${index}`).value;
-            if (!message) return alert("Please enter a message explaining why you want to reach out.");
-
+            if (!message) return alert("Please enter a message.");
             try {
                 const response = await fetch('/contact-uploader', {
                     method: 'POST',
@@ -98,76 +59,54 @@
                 });
                 const res = await response.json();
                 if (res.status === 'success') {
-                    alert("Your request has been sent! The original uploader will be notified privately.");
+                    alert("Request sent!");
                     toggleContactForm(index);
-                } else {
-                    alert("Error: " + res.message);
-                }
-            } catch (err) {
-                alert("Failed to send contact request.");
-            }
+                } else { alert("Error: " + res.message); }
+            } catch (err) { alert("Failed to send request."); }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             const rawData = sessionStorage.getItem('lastResult');
-            if (!rawData) {
-                document.getElementById('result-title').innerText = "No Data Found";
-                return;
-            }
-
+            if (!rawData) { document.getElementById('result-title').innerText = "No Data Found"; return; }
             const data = JSON.parse(rawData);
             const statusBox = document.getElementById('status-box');
 
             if (data.status === 'success' && data.match !== "Unknown") {
-                statusBox.className = 'status-banner match';
-                statusBox.innerText = "⚠️ Match Found";
+                statusBox.className = 'status-banner match'; statusBox.innerText = "⚠️ Match Found";
                 document.getElementById('result-title').innerText = "Subject Identified";
                 document.getElementById('display-name').innerText = data.match;
             } else {
-                statusBox.className = 'status-banner no-match';
-                statusBox.innerText = "No Records Found";
+                statusBox.className = 'status-banner no-match'; statusBox.innerText = "No Records Found";
                 document.getElementById('display-name').innerText = "Unknown Identity";
             }
-
             document.getElementById('display-timeline').innerText = `${data.start_date || 'N/A'} — ${data.end_date || 'Present'}`;
             document.getElementById('display-city').innerText = data.city || "Not Specified";
 
-            // Highlight Overlaps
             const overlapCont = document.getElementById('overlap-container');
             if (data.overlaps && data.overlaps.length > 0) {
-                overlapCont.innerHTML = `
-                    <div class="overlap-alert">
-                        🚨 DATING OVERLAP DETECTED<br>
-                        <small>This person was dating others during the timeframe you submitted.</small>
-                    </div>`;
+                overlapCont.innerHTML = `<div class="overlap-alert">🚨 DATING OVERLAP DETECTED<br><small>This person was dating others during this timeframe.</small></div>`;
             }
 
-            // Populate Historical Records
             const historyCont = document.getElementById('history-container');
             if (data.history && data.history.length > 0) {
                 data.history.forEach((item, index) => {
                     historyCont.innerHTML += `
                         <div class="result-card" style="border-left: 4px solid var(--brand);">
-                            <div class="detail-label">Dates (Start and End)</div>
+                            ${item.image_data ? `<img src="${item.image_data}" class="history-photo">` : ''}
+                            <div class="detail-label">Dates</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.start_date} to ${item.end_date || 'Present'}</div>
-                            
                             <div class="detail-label">City</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
-                            
                             <div class="detail-label">Comments</div>
-                            <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
-                            
-                            <button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
-                            
+                            <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments.'}</p>
+                            <button class="btn-contact" onclick="toggleContactForm(${index})">Contact User Privately</button>
                             <div id="contact-form-${index}" class="contact-box">
-                                <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out to this user..."></textarea>
-                                <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Private Request</button>
+                                <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain your request..."></textarea>
+                                <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Request</button>
                             </div>
                         </div>`;
                 });
-            } else {
-                historyCont.innerHTML = `<p style="color: #444; text-align: center;">No previous historical records found for this person.</p>`;
-            }
+            } else { historyCont.innerHTML = `<p style="color: #444; text-align: center;">No historical records found.</p>`; }
         });
     </script>
 </body>
