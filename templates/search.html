@@ -8,39 +8,64 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        .logo { width: 140px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
         .header { text-align: center; margin-bottom: 30px; }
         .slogan { color: var(--brand); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
+        
         .upload-container { background: #111; border: 2px dashed #333; border-radius: 25px; padding: 40px; width: 100%; max-width: 400px; text-align: center; cursor: pointer; transition: 0.3s; }
         .upload-container:hover { border-color: var(--brand); background: #161616; }
+        
         .preview-img { width: 100%; border-radius: 15px; display: none; margin-top: 15px; }
+        
         .form-group { width: 100%; max-width: 400px; margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-        input, textarea { background: #111; border: 1px solid #222; padding: 15px; border-radius: 12px; color: #fff; font-family: inherit; }
+        input, textarea { background: #111; border: 1px solid #222; padding: 15px; border-radius: 12px; color: #fff; font-family: inherit; font-size: 0.9rem; }
+        
+        .date-row { display: flex; gap: 10px; margin-top: 5px; }
+        .date-input-group { flex: 1; display: flex; flex-direction: column; }
+        .date-label { font-size: 0.7rem; color: #555; text-transform: uppercase; margin-left: 5px; margin-bottom: 5px; font-weight: 600; }
+
         .btn-scan { background: var(--brand); color: #fff; border: none; padding: 20px; border-radius: 50px; font-weight: 700; cursor: pointer; margin-top: 10px; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 50px; height: 50px; border: 5px solid #222; border-top: 5px solid var(--brand); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Checkmate" class="logo">
+
     <div id="loading-overlay">
         <div class="spinner"></div>
         <p style="margin-top: 20px; font-weight: 600;">LOCAL AI SCANNING MODELS...</p>
     </div>
-    <div class="header">
-        <div class="slogan">Facial Recognition Scan</div>
-        <h2 id="greeting">Upload Receipt</h2>
-    </div>
+
+  
     <div class="upload-container" onclick="document.getElementById('file-input').click()">
         <p id="upload-text">Click to upload photo of the subject</p>
         <img id="preview" class="preview-img">
         <input type="file" id="file-input" hidden accept="image/*">
     </div>
+
     <div class="form-group">
-        <input type="text" id="subj-name" placeholder="Subject Name (Optional)">
-        <input type="text" id="city" placeholder="City where they were spotted">
-        <textarea id="details" rows="3" placeholder="Additional details or timeline info..."></textarea>
+        <input type="text" id="subj-name" placeholder="Name">
+        <input type="text" id="city" placeholder="City">
+        
+        <div class="date-row">
+            <div class="date-input-group">
+                <label class="date-label">Started Dating</label>
+                <input type="date" id="start-date">
+            </div>
+            <div class="date-input-group">
+                <label class="date-label">Ended Dating</label>
+                <input type="date" id="end-date">
+            </div>
+        </div>
+
+        <textarea id="details" rows="3" placeholder="Comments (Optional)"></textarea>
         <button class="btn-scan" id="scan-btn">Run Local AI Match</button>
     </div>
+
     <script>
         const userName = sessionStorage.getItem('user_name');
         if (userName) document.getElementById('greeting').innerText = `Welcome, ${userName.split(' ')[0]}`;
@@ -70,22 +95,27 @@
                 image_data: base64Image,
                 name: document.getElementById('subj-name').value,
                 city: document.getElementById('city').value,
+                start_date: document.getElementById('start-date').value,
+                end_date: document.getElementById('end-date').value,
                 review_text: document.getElementById('details').value,
                 submitter_email: sessionStorage.getItem('user_email') || "anonymous"
             };
 
             try {
-                const response = await fetch('/submit-and-check', {
+                const response = await fetch('https://checkmate.24p3s79u0l3v.ca-tor.codeengine.appdomain.cloud/submit-and-check', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
+                if (!response.ok) throw new Error('Network error');
+
                 const result = await response.json();
                 sessionStorage.setItem('lastResult', JSON.stringify(result));
-                // UPDATED: Redirects to /results
-                window.location.href = '/results';
+                window.location.href = 'results.html';
             } catch (err) {
-                alert("Scan failed. Ensure your local AI server is running.");
+                console.error(err);
+                alert("Scan failed. Ensure your AI server is running and CORS is enabled.");
                 document.getElementById('loading-overlay').style.display = "none";
             }
         };
