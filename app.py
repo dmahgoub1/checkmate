@@ -51,6 +51,10 @@ def results_page(): return render_template('results.html')
 def submit_and_check():
     try:
         data = request.get_json()
+        # Normalize the input name to lowercase
+        raw_name = data.get('name', 'Unknown')
+        normalized_name = raw_name.lower().strip() 
+
         header, encoded = data['image_data'].split(",", 1)
         image_bytes = base64.b64decode(encoded)
         nparr = np.frombuffer(image_bytes, np.uint8)
@@ -61,17 +65,19 @@ def submit_and_check():
         if not unknown_encodings: return jsonify({"status": "no_face_detected"}), 200
 
         known_faces_data = list(faces_collection.find())
-        name = "Unknown"; history = []; overlaps = []
+        display_name = "Unknown"; history = []; overlaps = []
 
+        # 1. SEARCH FOR EXISTING MATCH
         if known_faces_data:
             known_encs = [np.array(f['encoding']) for f in known_faces_data]
+            # Use the stored names (which are now lowercase)
             known_names = [f['name'] for f in known_faces_data]
             matches = face_recognition.compare_faces(known_encs, unknown_encodings[0])
             
             if True in matches:
-                name = known_names[matches.index(True)]
-                # Retrieve history. Note: submitter_email is NOT sent to the frontend for privacy
-                history = list(faces_collection.find({"name": name}, {"_id": 0, "encoding": 0, "submitter_email": 0}))
+                display_name = known_names[matches.index(True)]
+                # Search history using lowercase name
+                history = list(faces_collection.find({"name": display_name}, {"_id": 0, "encoding": 0, "submitter_email": 0}))
                 
                 user_start = data.get('start_date')
                 user_end = data.get('end_date') or "9999-12-31"
@@ -83,11 +89,26 @@ def submit_and_check():
                         if user_start <= rec_end and user_end >= rec_start:
                             overlaps.append({"city": record.get('city'), "dates": f"{rec_start} to {record.get('end_date') or 'Present'}"})
 
-                if data.get('submitter_email') != "anonymous": send_alert_email(name)
+        # 2. SAVE AS NEW RECORD IF NOT FOUND
+        if display_name == "Unknown":
+            display_name = normalized_name
+            new_face = {
+                "name": normalized_name, # Saved as lowercase
+                "encoding": unknown_encodings[0].tolist(),
+                "city": data.get('city'),
+                "start_date": data.get('start_date'),
+                "end_date": data.get('end_date'),
+                "review_text": data.get('review_text'),
+                "submitter_email": data.get('submitter_email')
+            }
+            faces_collection.insert_one(new_face)
+
+        if data.get('submitter_email') != "anonymous" and display_name != "Unknown": 
+            send_alert_email(display_name)
 
         return jsonify({
-            "status": "success" if name != "Unknown" else "no_match",
-            "match": name,
+            "status": "success",
+            "match": display_name,
             "city": data.get('city'),
             "details": data.get('review_text'),
             "start_date": data.get('start_date'),
@@ -96,6 +117,7 @@ def submit_and_check():
             "overlaps": overlaps
         }), 200
     except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/contact-uploader', methods=['POST'])
 def contact_uploader():
