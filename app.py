@@ -51,7 +51,6 @@ def results_page(): return render_template('results.html')
 def submit_and_check():
     try:
         data = request.get_json()
-        # Normalize the input name to lowercase
         raw_name = data.get('name', 'Unknown')
         normalized_name = raw_name.lower().strip() 
 
@@ -67,16 +66,14 @@ def submit_and_check():
         known_faces_data = list(faces_collection.find())
         display_name = "Unknown"; history = []; overlaps = []
 
-        # 1. SEARCH FOR EXISTING MATCH
         if known_faces_data:
             known_encs = [np.array(f['encoding']) for f in known_faces_data]
-            # Use the stored names (which are now lowercase)
             known_names = [f['name'] for f in known_faces_data]
             matches = face_recognition.compare_faces(known_encs, unknown_encodings[0])
             
             if True in matches:
                 display_name = known_names[matches.index(True)]
-                # Search history using lowercase name
+                # History now includes image_data
                 history = list(faces_collection.find({"name": display_name}, {"_id": 0, "encoding": 0, "submitter_email": 0}))
                 
                 user_start = data.get('start_date')
@@ -89,19 +86,19 @@ def submit_and_check():
                         if user_start <= rec_end and user_end >= rec_start:
                             overlaps.append({"city": record.get('city'), "dates": f"{rec_start} to {record.get('end_date') or 'Present'}"})
 
-        # 2. SAVE AS NEW RECORD IF NOT FOUND
-        if display_name == "Unknown":
-            display_name = normalized_name
-            new_face = {
-                "name": normalized_name, # Saved as lowercase
-                "encoding": unknown_encodings[0].tolist(),
-                "city": data.get('city'),
-                "start_date": data.get('start_date'),
-                "end_date": data.get('end_date'),
-                "review_text": data.get('review_text'),
-                "submitter_email": data.get('submitter_email')
-            }
-            faces_collection.insert_one(new_face)
+        # Save current submission to database
+        new_face = {
+            "name": display_name if display_name != "Unknown" else normalized_name,
+            "encoding": unknown_encodings[0].tolist(),
+            "image_data": data['image_data'], # SAVES THE PHOTO
+            "city": data.get('city'),
+            "start_date": data.get('start_date'),
+            "end_date": data.get('end_date'),
+            "review_text": data.get('review_text'),
+            "submitter_email": data.get('submitter_email')
+        }
+        faces_collection.insert_one(new_face)
+        if display_name == "Unknown": display_name = normalized_name
 
         if data.get('submitter_email') != "anonymous" and display_name != "Unknown": 
             send_alert_email(display_name)
@@ -118,47 +115,27 @@ def submit_and_check():
         }), 200
     except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
 
-
 @app.route('/contact-uploader', methods=['POST'])
 def contact_uploader():
-    """Sends a private message to an uploader without revealing their email to the sender."""
     try:
         data = request.get_json()
         target_name = data.get('target_name')
         message_content = data.get('message')
-        
-        # Internal lookup for the uploader's email
         original_record = faces_collection.find_one({"name": target_name})
-        
         if not original_record or 'submitter_email' not in original_record:
             return jsonify({"status": "error", "message": "Uploader contact info unavailable."}), 404
-
         dest_email = original_record['submitter_email']
-        
         msg = MIMEMultipart()
-        msg['From'] = SMTP_USER
-        msg['To'] = dest_email
-        msg['Subject'] = f"Checkmate Inquiry: {target_name}"
-        
+        msg['From'] = SMTP_USER; msg['To'] = dest_email; msg['Subject'] = f"Checkmate Inquiry: {target_name}"
         body = (f"Hello,\n\nA user has found a match for '{target_name}' and wishes to connect.\n\n"
-                f"Message from the user:\n"
-                f"--------------------------------------------------\n"
-                f"{message_content}\n"
-                f"--------------------------------------------------\n\n"
+                f"Message from the user:\n--------------------------------------------------\n"
+                f"{message_content}\n--------------------------------------------------\n\n"
                 f"To respond, you may reply directly to this email.")
-        
         msg.attach(MIMEText(body, 'plain'))
-
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
-        server.send_message(msg)
-        server.quit()
-
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
+        server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
         return jsonify({"status": "success", "message": "Inquiry sent privately."}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+    except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
