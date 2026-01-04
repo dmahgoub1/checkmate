@@ -2,7 +2,7 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, url_for
 from pymongo import MongoClient
 import face_recognition
 import numpy as np
@@ -34,7 +34,7 @@ def send_alert_email(name):
     msg['To'] = ALERTS_EMAIL
     msg['Subject'] = f"ALERT: {name} Identified"
     
-    body = f"The Checkmate Security system has identified: {name}."
+    body = f"The following individual has been identified: {name}"
     msg.attach(MIMEText(body, 'plain'))
 
     try:
@@ -47,9 +47,23 @@ def send_alert_email(name):
     except Exception as e:
         print(f"Email failed: {e}")
 
+# --- NAVIGATION ROUTES (Added to fix 404s) ---
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/search')
+def search_page():
+    return render_template('search.html')
+
+@app.route('/results')
+def results_page():
+    # Captures the user's search query from search.html
+    query = request.args.get('query', '')
+    return render_template('results.html', user_query=query)
+
+# --- FACE RECOGNITION LOGIC ---
 
 @app.route('/recognize', methods=['POST'])
 def recognize_face():
@@ -57,19 +71,16 @@ def recognize_face():
     file = request.files['image']
     email_enabled = request.form.get('email_enabled') == 'true'
     
-    # Load the uploaded image
     img = face_recognition.load_image_file(file)
     unknown_encodings = face_recognition.face_encodings(img)
 
     if not unknown_encodings:
         return jsonify({"status": "no_face_detected"})
 
-    # Fetch known faces from MongoDB
     known_faces_data = list(faces_collection.find())
     known_encodings = [np.array(f['encoding']) for f in known_faces_data]
     known_names = [f['name'] for f in known_faces_data]
 
-    # Compare
     matches = face_recognition.compare_faces(known_encodings, unknown_encodings[0])
     name = "Unknown"
 
@@ -80,8 +91,7 @@ def recognize_face():
         if email_enabled:
             send_alert_email(name)
 
-    return jsonify({"status": "success", "match": name})
+    return jsonify({"status": "success", "name": name})
 
-if __name__ == '__main__':
-    # Using 8080 for IBM Cloud compatibility
+if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)
