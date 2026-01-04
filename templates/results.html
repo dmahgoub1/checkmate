@@ -48,6 +48,7 @@
             const form = document.getElementById(`contact-form-${index}`);
             form.style.display = form.style.display === 'block' ? 'none' : 'block';
         }
+
         async function sendContactRequest(targetName, index) {
             const message = document.getElementById(`msg-${index}`).value;
             if (!message) return alert("Please enter a message.");
@@ -79,6 +80,7 @@
                 statusBox.className = 'status-banner no-match'; statusBox.innerText = "No Records Found";
                 document.getElementById('display-name').innerText = "Unknown Identity";
             }
+            
             document.getElementById('display-timeline').innerText = `${data.start_date || 'N/A'} — ${data.end_date || 'Present'}`;
             document.getElementById('display-city').innerText = data.city || "Not Specified";
 
@@ -92,21 +94,28 @@
                 data.history.forEach((item, index) => {
                     historyCont.innerHTML += `
                         <div class="result-card" style="border-left: 4px solid var(--brand);">
-                            ${item.image_data ? `<img src="${item.image_data}" class="history-photo">` : ''}
-                            <div class="detail-label">Dates</div>
+                            ${item.image_data ? `<img src="${item.image_data}" class="history-photo" alt="Historical Record">` : ''}
+                            
+                            <div class="detail-label">Dates (Start and End)</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.start_date} to ${item.end_date || 'Present'}</div>
+                            
                             <div class="detail-label">City</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
+                            
                             <div class="detail-label">Comments</div>
-                            <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments.'}</p>
-                            <button class="btn-contact" onclick="toggleContactForm(${index})">Contact User Privately</button>
+                            <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
+                            
+                            <button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
+                            
                             <div id="contact-form-${index}" class="contact-box">
-                                <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain your request..."></textarea>
-                                <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Request</button>
+                                <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out..."></textarea>
+                                <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Private Request</button>
                             </div>
                         </div>`;
                 });
-            } else { historyCont.innerHTML = `<p style="color: #444; text-align: center;">No historical records found.</p>`; }
+            } else { 
+                historyCont.innerHTML = `<p style="color: #444; text-align: center;">No previous historical records found for this person.</p>`; 
+            }
         });
     </script>
 </body>
