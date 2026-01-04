@@ -137,9 +137,6 @@ def contact_uploader():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/results')
-def results_page():
-    return render_template('results.html')
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
