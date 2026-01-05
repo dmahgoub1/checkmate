@@ -46,7 +46,7 @@ def search():
     return render_template('search.html')
 
 @app.route('/results', methods=['GET', 'POST'], strict_slashes=False)
-def search():
+def results():
     return render_template('results.html')
 
 @app.route('/submit-and-check', methods=['POST'])
