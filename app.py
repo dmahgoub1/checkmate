@@ -41,11 +41,13 @@ def send_alert_email(name):
 @app.route('/')
 def index(): return render_template('index.html')
 
-@app.route('/search')
-def search_page(): return render_template('search.html')
+@app.route('/search', methods=['GET', 'POST'], strict_slashes=False)
+def search():
+    return render_template('search.html')
 
-@app.route('/results')
-def results_page(): return render_template('results.html')
+@app.route('/results', methods=['GET', 'POST'], strict_slashes=False)
+def search():
+    return render_template('results.html')
 
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():

@@ -1,9 +1,17 @@
 {
   "version": 2,
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "https://checkmate.24p3s79u0l3v.ca-tor.codeengine.appdomain.cloud/"
+    { 
+      "source": "/search", 
+      "destination": "https://your-ibm-link.appdomain.cloud/search" 
+    },
+    { 
+      "source": "/results", 
+      "destination": "https://your-ibm-link.appdomain.cloud/results" 
+    },
+    { 
+      "source": "/(.*)", 
+      "destination": "https://your-ibm-link.appdomain.cloud/$1" 
     }
   ]
 }
