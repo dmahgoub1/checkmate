@@ -51,8 +51,8 @@
     </div>
     <h3 style="color: var(--brand); margin-top: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Historical Database Records</h3>
     <div id="history-container" style="width: 100%; max-width: 500px;"></div>
-    <button class="btn-action" onclick="window.location.href='/search'">Run New Scan</button>
-    <button class="btn-action btn-secondary" onclick="window.location.href='/'">Return Home</button>
+<a href="/search" class="btn-action" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">     Run New Scan </a>    
+<a href="/" class="btn-action btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;" onclick="sessionStorage.clear();">      Return Home    </a>
 
     <script>
         function toggleContactForm(index) {

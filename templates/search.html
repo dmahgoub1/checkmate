@@ -126,11 +126,15 @@
                     body: JSON.stringify(payload)
                 });
 
-                const result = await response.json();
-                if (result.status === "success" || result.status === "no_face_detected") {
-                    sessionStorage.setItem('lastResult', JSON.stringify(result));
-                    // CRITICAL: Point to the Flask route, not the .html file
-                    window.location.href = '/results';
+const result = await response.json();
+if (result.status === "success" || result.status === "no_face_detected") {
+    sessionStorage.setItem('lastResult', JSON.stringify(result));
+    
+    // Use a slight delay and ensure the path is absolute
+    // This gives Safari time to clear the previous POST state
+    setTimeout(() => {
+        window.location.replace('/results'); 
+    }, 100);
                 } else {
                     alert("Error: " + result.message);
                     document.getElementById('loading-overlay').style.display = "none";
