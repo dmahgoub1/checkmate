@@ -1,14 +1,9 @@
-# Face Recognition & Image Processing
-dlib
-face_recognition
-numpy
-opencv-python-headless
-
-# Database & Backend
-pymongo
 flask
 flask-cors
-gunicorn
-
-# Utilities
-python-dotenv
+pymongo
+pillow
+numpy
+cmake
+dlib
+face_recognition
+requests
