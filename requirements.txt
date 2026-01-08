@@ -1,9 +1,20 @@
+# Web
 flask
 flask-cors
+gunicorn
+
+# Database
 pymongo
-pillow
+
+# Image / math
 numpy
-cmake
+pillow
+opencv-python-headless
+
+# Face recognition
 dlib
 face_recognition
+
+# Utilities
+python-dotenv
 requests
