@@ -25,6 +25,7 @@ ALERTS_EMAIL = os.environ.get("ALERTS_EMAIL")
 client = MongoClient(MONGO_URI)
 db = client.checkmate
 faces_collection = db.known_faces
+watch_collection = db.watch_requests # New collection for future notifications
 
 def send_alert_email(name):
     if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]): return
@@ -37,6 +38,29 @@ def send_alert_email(name):
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
         server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
     except Exception as e: print(f"Email error: {e}")
+
+# Helper for the notification feature
+def notify_watchers(new_encoding, matched_name):
+    if not all([SMTP_USER, SMTP_PASS]): return
+    
+    # Get all people watching for this identity
+    watchers = watch_collection.find()
+    for watch in watchers:
+        known_enc = np.array(watch['face_encoding'])
+        # Use strict tolerance (0.5) to ensure it's the EXACT same person
+        match = face_recognition.compare_faces([known_enc], new_encoding, tolerance=0.5)
+        
+        if match[0]:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = SMTP_USER
+                msg['To'] = watch['email']
+                msg['Subject'] = f"Checkmate Update: New match for {matched_name}"
+                body = f"Hello,\n\nA new photo has been uploaded that matches the identity of '{matched_name}', who you are watching."
+                msg.attach(MIMEText(body, 'plain'))
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
+                server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
+            except Exception as e: print(f"Watcher Notification Error: {e}")
 
 @app.route('/')
 def index(): return render_template('index.html')
@@ -52,7 +76,6 @@ def results():
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
-
 
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
@@ -70,17 +93,17 @@ def submit_and_check():
         unknown_encodings = face_recognition.face_encodings(rgb_img)
         if not unknown_encodings: return jsonify({"status": "no_face_detected"}), 200
 
+        current_encoding = unknown_encodings[0]
         known_faces_data = list(faces_collection.find())
         display_name = "Unknown"; history = []; overlaps = []
 
         if known_faces_data:
             known_encs = [np.array(f['encoding']) for f in known_faces_data]
             known_names = [f['name'] for f in known_faces_data]
-            matches = face_recognition.compare_faces(known_encs, unknown_encodings[0])
+            matches = face_recognition.compare_faces(known_encs, current_encoding)
             
             if True in matches:
                 display_name = known_names[matches.index(True)]
-                # History now includes image_data
                 history = list(faces_collection.find({"name": display_name}, {"_id": 0, "encoding": 0, "submitter_email": 0}))
                 
                 user_start = data.get('start_date')
@@ -93,11 +116,15 @@ def submit_and_check():
                         if user_start <= rec_end and user_end >= rec_start:
                             overlaps.append({"city": record.get('city'), "dates": f"{rec_start} to {record.get('end_date') or 'Present'}"})
 
+        # Feature: Notify anyone watching for this unique face
+        if display_name != "Unknown":
+            notify_watchers(current_encoding, display_name)
+
         # Save current submission to database
         new_face = {
             "name": display_name if display_name != "Unknown" else normalized_name,
-            "encoding": unknown_encodings[0].tolist(),
-            "image_data": data['image_data'], # SAVES THE PHOTO
+            "encoding": current_encoding.tolist(),
+            "image_data": data['image_data'],
             "city": data.get('city'),
             "start_date": data.get('start_date'),
             "end_date": data.get('end_date'),
@@ -122,6 +149,26 @@ def submit_and_check():
         }), 200
     except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/watch', methods=['POST'])
+def add_watch_request():
+    try:
+        data = request.get_json()
+        target_name = data.get('target_name')
+        email = data.get('email')
+        
+        # Get the unique encoding for the specific person the user just saw
+        original_record = faces_collection.find_one({"name": target_name})
+        if not original_record:
+            return jsonify({"status": "error", "message": "Face data not found."}), 404
+            
+        watch_collection.insert_one({
+            "target_name": target_name,
+            "email": email,
+            "face_encoding": original_record['encoding'] # Store unique identity
+        })
+        return jsonify({"status": "success", "message": f"You will be notified if {target_name} is uploaded again."}), 200
+    except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/contact-uploader', methods=['POST'])
 def contact_uploader():
     try:
@@ -134,9 +181,9 @@ def contact_uploader():
         dest_email = original_record['submitter_email']
         msg = MIMEMultipart()
         msg['From'] = SMTP_USER; msg['To'] = dest_email; msg['Subject'] = f"Checkmate Inquiry: {target_name}"
-        body = (f"Hello,\n\nA user has found a match for '{target_name}' and wishes to connect.\n\n"
-                f"Message from the user:\n--------------------------------------------------\n"
-                f"{message_content}\n--------------------------------------------------\n\n"
+        body = (f"Hello,\\n\\nA user has found a match for '{target_name}' and wishes to connect.\\n\\n"
+                f"Message from the user:\\n--------------------------------------------------\\n"
+                f"{message_content}\\n--------------------------------------------------\\n\\n"
                 f"To respond, you may reply directly to this email.")
         msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
@@ -146,6 +193,5 @@ def contact_uploader():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
-
 
 app.config['DEBUG'] = True
