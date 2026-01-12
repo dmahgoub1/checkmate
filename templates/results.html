@@ -1,21 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HLYJB6WHLG"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-HLYJB6WHLG');
-</script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HLYJB6WHLG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-HLYJB6WHLG');
+    </script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkmate - Results</title>
-  <style>
+    <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
@@ -38,39 +35,15 @@
         .btn-action { background: var(--brand); color: #fff; border: none; padding: 18px; border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%; max-width: 500px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .btn-secondary { background: #222; }
 
-        /* Footer Styles */
-        .site-footer {
-            width: 100%;
-            margin-top: 60px;
-            padding: 40px 20px 30px;
-            background: rgba(20, 20, 20, 0.5);
-            border-top: 1px solid #222;
-        }
+        /* Watch Feature Styles */
+        .watch-container { margin-top: 20px; border-top: 1px solid #333; padding-top: 20px; }
+        .watch-input { width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
 
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .footer-link {
-            color: #888;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.3s ease;
-            font-weight: 500;
-        }
-
-        .footer-link:hover {
-            color: var(--brand);
-        }
-
-        .footer-copyright {
-            color: #555;
-            font-size: 0.8rem;
-            font-weight: 400;
-            margin-top: 12px;
-        }
+        .site-footer { width: 100%; margin-top: 60px; padding: 40px 20px 30px; background: rgba(20, 20, 20, 0.5); border-top: 1px solid #222; }
+        .footer-content { max-width: 1200px; margin: 0 auto; text-align: center; }
+        .footer-link { color: #888; text-decoration: none; font-size: 0.9rem; transition: color 0.3s ease; font-weight: 500; }
+        .footer-link:hover { color: var(--brand); }
+        .footer-copyright { color: #555; font-size: 0.8rem; font-weight: 400; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -78,20 +51,48 @@
     <div class="header"><div class="slogan">Scan Results</div><h2 id="result-title">Processing...</h2></div>
     <div id="status-box" class="status-banner">Checking Records...</div>
     <div id="overlap-container"></div>
+    
     <div class="result-card">
         <div class="detail-label">Name</div><div id="display-name" class="detail-value">--</div>
         <div class="detail-label">Dates (Start and End)</div><div id="display-timeline" class="detail-value">--</div>
         <div class="detail-label">City</div><div id="display-city" class="detail-value">--</div>
+
+        <div id="watch-section" class="watch-container" style="display: none;">
+            <div class="detail-label">Notify Me of Future Matches</div>
+            <p style="font-size: 0.75rem; color: #888;">Enter your email to get alerted if this specific person is scanned again by others.</p>
+            <input type="email" id="watch-email" class="watch-input" placeholder="Enter your email address">
+            <button class="btn-send-request" onclick="subscribeToWatch()">Watch This Identity</button>
+        </div>
     </div>
+
     <h3 style="color: var(--brand); margin-top: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Historical Database Records</h3>
     <div id="history-container" style="width: 100%; max-width: 500px;"></div>
-<a href="/search" class="btn-action" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">     Run New Scan </a>    
-<a href="/" class="btn-action btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;" onclick="sessionStorage.clear();">      Return Home    </a>
+    
+    <a href="/search" class="btn-action" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">Run New Scan</a>    
+    <a href="/" class="btn-action btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;" onclick="sessionStorage.clear();">Return Home</a>
 
     <script>
+        let currentMatchedName = "";
+
         function toggleContactForm(index) {
             const form = document.getElementById(`contact-form-${index}`);
             form.style.display = form.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function subscribeToWatch() {
+            const email = document.getElementById('watch-email').value;
+            if (!email) return alert("Please enter a valid email.");
+            
+            try {
+                const response = await fetch('/watch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_name: currentMatchedName, email: email })
+                });
+                const res = await response.json();
+                alert(res.message);
+                if (res.status === 'success') document.getElementById('watch-section').style.display = 'none';
+            } catch (err) { alert("Failed to set watch request."); }
         }
 
         async function sendContactRequest(targetName, index) {
@@ -118,9 +119,11 @@
             const statusBox = document.getElementById('status-box');
 
             if (data.status === 'success' && data.match !== "Unknown") {
+                currentMatchedName = data.match;
                 statusBox.className = 'status-banner match'; statusBox.innerText = "⚠️ Match Found";
                 document.getElementById('result-title').innerText = "Subject Identified";
                 document.getElementById('display-name').innerText = data.match;
+                document.getElementById('watch-section').style.display = 'block'; // Show watch option on match
             } else {
                 statusBox.className = 'status-banner no-match'; statusBox.innerText = "No Records Found";
                 document.getElementById('display-name').innerText = "Unknown Identity";
@@ -140,18 +143,13 @@
                     historyCont.innerHTML += `
                         <div class="result-card" style="border-left: 4px solid var(--brand);">
                             ${item.image_data ? `<img src="${item.image_data}" class="history-photo" alt="Historical Record">` : ''}
-                            
                             <div class="detail-label">Dates (Start and End)</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.start_date} to ${item.end_date || 'Present'}</div>
-                            
                             <div class="detail-label">City</div>
                             <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
-                            
                             <div class="detail-label">Comments</div>
                             <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
-                            
                             <button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
-                            
                             <div id="contact-form-${index}" class="contact-box">
                                 <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out..."></textarea>
                                 <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Private Request</button>
@@ -164,18 +162,14 @@
         });
     </script>
 
- <footer class="site-footer">
+    <footer class="site-footer">
         <div class="footer-content">
             <div class="footer-links">
                 <a href="{{ url_for('terms') }}" class="footer-link">Terms of Service</a>
                 <span class="footer-divider">•</span>
-                            </div>
-            <div class="footer-copyright">
-                © 2026 CheckMate. All rights reserved.
             </div>
+            <div class="footer-copyright">© 2026 CheckMate. All rights reserved.</div>
         </div>
     </footer>
-
-
 </body>
 </html>
