@@ -2,7 +2,8 @@ name: Deploy to Code Engine
 
 on:
   push:
-    branches: '**'
+    # Trigger on push to any branch
+    branches: [ '**' ]
 
 jobs:
   deploy:
@@ -27,12 +28,18 @@ jobs:
     
     - name: Cleanup old container images
       run: |
-        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+        # Install IBM Cloud CLI with sudo as required by the runner environment
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sudo sh
+        
+        # Explicitly install the container-registry (cr) plugin to fix the 'cr is not a registered command' error
+        ibmcloud plugin install container-registry -r 'IBM Cloud'
         
         ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
         
+        # Login to the registry
         ibmcloud cr login
         
+        # Cleanup logic for old images
         ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
           grep checkmate | \
           tail -n +2 | \
