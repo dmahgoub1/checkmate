@@ -1,0 +1,27 @@
+name: Deploy to Code Engine
+
+on:
+  push:
+    branches: [ main ]  # Deploy whenever you push to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to IBM Cloud Code Engine
+      uses: IBM/code-engine-github-action@v1
+      with:
+        api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
+        resource-group: 'Default'
+        region: 'us-south'  # Change to your region
+        project: 'checkmate'  # Your Code Engine project name
+        component: 'app'
+        name: 'checkmate-app'  # Your app name
+        build-source: './'
+        dockerfile: 'Dockerfile'
+        cpu: 1
+        memory: 4G
