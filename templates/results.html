@@ -15,7 +15,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkmate - Results</title>
-    <style>
+  <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         :root { --brand: #ff4b81; --dark: #000; }
         body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
@@ -37,6 +37,40 @@
         .btn-send-request { background: var(--brand); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; }
         .btn-action { background: var(--brand); color: #fff; border: none; padding: 18px; border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%; max-width: 500px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .btn-secondary { background: #222; }
+
+        /* Footer Styles */
+        .site-footer {
+            width: 100%;
+            margin-top: 60px;
+            padding: 40px 20px 30px;
+            background: rgba(20, 20, 20, 0.5);
+            border-top: 1px solid #222;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-link {
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .footer-link:hover {
+            color: var(--brand);
+        }
+
+        .footer-copyright {
+            color: #555;
+            font-size: 0.8rem;
+            font-weight: 400;
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -129,5 +163,19 @@
             }
         });
     </script>
+
+ <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="{{ url_for('terms') }}" class="footer-link">Terms of Service</a>
+                <span class="footer-divider">•</span>
+                            </div>
+            <div class="footer-copyright">
+                © 2026 CheckMate. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+
 </body>
 </html>
