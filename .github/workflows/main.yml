@@ -1,0 +1,39 @@
+name: Deploy to Code Engine
+
+on:
+  push:
+    branches: '**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to IBM Cloud Code Engine
+      uses: IBM/code-engine-github-action@v1
+      with:
+        api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
+        resource-group: 'Default'
+        region: 'ca-tor'
+        project: 'checkmate'
+        name: 'checkmate'
+        build-source: './'
+        dockerfile: 'Dockerfile'
+        cpu: 1
+        memory: 4G
+    
+    - name: Cleanup old container images
+      run: |
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+        
+        ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
+        
+        ibmcloud cr login
+        
+        ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
+          grep checkmate | \
+          tail -n +2 | \
+          xargs -I {} ibmcloud cr image-rm {} --force || true
