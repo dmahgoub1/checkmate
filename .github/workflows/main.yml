@@ -22,9 +22,11 @@ jobs:
         name: 'checkmate'
         build-source: './'
         build-strategy: dockerfile
-        # REQUIRED: Replace 'your-namespace' with your actual ICR namespace
-        image: icr.io/your-namespace/checkmate:latest
-        # REQUIRED: This tells CE to wait for the build to finish so you see logs
+        # FORCES the image into your registry and makes it visible
+        image: icr.io/checkmate-registry/checkmate:latest
+        # Uses the default secret IBM creates for your registry
+        registry-secret: ce-auto-icr-private-tor
+        # REQUIRED: Keeps the GitHub Action open so you see the REAL logs
         wait: true
         cpu: 1
         memory: 4G
@@ -35,7 +37,7 @@ jobs:
         ibmcloud plugin install container-registry -r 'IBM Cloud'
         ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
         ibmcloud cr login
-        # This will now find images because we explicitly pushed to 'image:' above
+        # This will now find images because they are explicitly pushed to your namespace
         ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
           grep checkmate | \
           tail -n +2 | \
