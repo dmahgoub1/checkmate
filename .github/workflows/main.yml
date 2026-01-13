@@ -39,3 +39,4 @@ jobs:
           grep checkmate | \
           tail -n +2 | \
           xargs -I {} ibmcloud cr image-rm {} --force || true
+ 
