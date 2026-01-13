@@ -21,10 +21,10 @@ jobs:
         project: 'checkmate'
         name: 'checkmate'
         component: 'app'
-        # THIS SECTION TRIGGERS THE BUILD
         build-source: './' 
         build-strategy: 'dockerfile'
-        image: 'icr.io/checkmate-registry/checkmate:latest'
+        # CHANGED TO ca.icr.io
+        image: 'ca.icr.io/checkmate-registry/checkmate:latest'
         registry-secret: 'ce-auto-icr-private-tor'
         cpu: 1
         memory: 4G
