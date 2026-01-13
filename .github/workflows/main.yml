@@ -35,9 +35,10 @@ jobs:
         ibmcloud plugin install container-registry -r 'IBM Cloud'
         ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
         ibmcloud cr login
-        
+         
         # Deletes older images, keeping only the 1 most recent
         ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
           grep checkmate | \
           tail -n +2 | \
+
           xargs -I {} ibmcloud cr image-rm {} --force || true
