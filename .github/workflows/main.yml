@@ -1,4 +1,18 @@
-- name: Deploy to IBM Cloud Code Engine
+name: Deploy to Code Engine
+
+on:
+  push:
+    branches: [ '**' ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to IBM Cloud Code Engine
       uses: IBM/code-engine-github-action@v1
       with:
         api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
@@ -7,6 +21,23 @@
         project: 'checkmate'
         name: 'checkmate'
         build-source: './'
-        # Removed 'dockerfile' as it is an invalid input for this action
         cpu: 1
         memory: 4G
+    
+    - name: Cleanup old container images
+      run: |
+        # Install CLI with sudo as required by the runner
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sudo sh
+        
+        # Install the missing container-registry plugin
+        ibmcloud plugin install container-registry -r 'IBM Cloud'
+        
+        ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
+        
+        ibmcloud cr login
+        
+        # Keep only the newest image to save storage space
+        ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
+          grep checkmate | \
+          tail -n +2 | \
+          xargs -I {} ibmcloud cr image-rm {} --force || true
