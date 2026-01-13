@@ -2,7 +2,6 @@ name: Deploy to Code Engine
 
 on:
   push:
-    # Trigger on push to any branch
     branches: [ '**' ]
 
 jobs:
@@ -22,26 +21,21 @@ jobs:
         project: 'checkmate'
         name: 'checkmate'
         build-source: './'
-        # FORCES a fresh build from your Dockerfile instead of skipping
         build-strategy: dockerfile
+        # REQUIRED: Replace 'your-namespace' with your actual ICR namespace
+        image: icr.io/your-namespace/checkmate:latest
+        # REQUIRED: This tells CE to wait for the build to finish so you see logs
+        wait: true
         cpu: 1
         memory: 4G
     
     - name: Cleanup old container images
       run: |
-        # Install IBM Cloud CLI with sudo
         curl -fsSL https://clis.cloud.ibm.com/install/linux | sudo sh
-        
-        # Install the container-registry plugin so 'cr' commands work
         ibmcloud plugin install container-registry -r 'IBM Cloud'
-        
-        # Authenticate
         ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
-        
-        # Login to the Container Registry
         ibmcloud cr login
-        
-        # Keep only the most recent image and delete all others to save space
+        # This will now find images because we explicitly pushed to 'image:' above
         ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
           grep checkmate | \
           tail -n +2 | \
