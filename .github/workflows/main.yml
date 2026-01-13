@@ -12,33 +12,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     
-    - name: Deploy to IBM Cloud Code Engine
+    - name: Build and Deploy to Code Engine
       uses: IBM/code-engine-github-action@v1
       with:
         api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
         resource-group: 'Default'
         region: 'ca-tor'
         project: 'checkmate'
-        # Valid component names: 'app', 'job', or 'function'
-        component: 'app' 
         name: 'checkmate'
-        build-source: './'
+        component: 'app'
+        # THIS SECTION TRIGGERS THE BUILD
+        build-source: './' 
         build-strategy: 'dockerfile'
         image: 'icr.io/checkmate-registry/checkmate:latest'
         registry-secret: 'ce-auto-icr-private-tor'
         cpu: 1
         memory: 4G
-    
-    - name: Cleanup old container images
-      run: |
-        curl -fsSL https://clis.cloud.ibm.com/install/linux | sudo sh
-        ibmcloud plugin install container-registry -r 'IBM Cloud'
-        ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
-        ibmcloud cr login
-         
-        # Deletes older images, keeping only the 1 most recent
-        ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
-          grep checkmate | \
-          tail -n +2 | \
-
-          xargs -I {} ibmcloud cr image-rm {} --force || true
