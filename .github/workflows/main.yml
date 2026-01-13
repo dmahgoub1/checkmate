@@ -1,18 +1,4 @@
-name: Deploy to Code Engine
-
-on:
-  push:
-    branches: [ '**' ] # Triggers on any branch push
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Deploy to IBM Cloud Code Engine
+- name: Deploy to IBM Cloud Code Engine
       uses: IBM/code-engine-github-action@v1
       with:
         api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
@@ -21,22 +7,6 @@ jobs:
         project: 'checkmate'
         name: 'checkmate'
         build-source: './'
-        dockerfile: 'Dockerfile'
+        # Removed 'dockerfile' as it is an invalid input for this action
         cpu: 1
         memory: 4G
-    
-    - name: Automatic Image Cleanup
-      run: |
-        # Install CLI and Plugin automatically
-        curl -fsSL https://clis.cloud.ibm.com/install/linux | sudo sh
-        ibmcloud plugin install container-registry -r 'IBM Cloud'
-        
-        ibmcloud login --apikey ${{ secrets.IBM_CLOUD_API_KEY }} -r ca-tor -g Default
-        ibmcloud cr login
-        
-        # This keeps only the newest images and deletes the old ones automatically
-        ibmcloud cr image-list --format '{{.Repository}}:{{.Tag}}' | \
-          grep checkmate | \
-          tail -n +2 | \
-          xargs -I {} ibmcloud cr image-rm {} --force || true
- 
