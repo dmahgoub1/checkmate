@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from pymongo import MongoClient
+from bson import ObjectId
 import face_recognition
 
 app = Flask(__name__)
@@ -88,6 +89,43 @@ You received this email because you subscribed to watch alerts for {name}.
     except Exception as e:
         print(f"Failed to send email to {recipient_email}: {e}", flush=True)
 
+def send_contact_request_email(uploader_email, requester_email, message, person_name):
+    if not all([SMTP_USER, SMTP_PASS]): 
+        print(f"Skipping contact request email: SMTP settings incomplete.", flush=True)
+        return
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = uploader_email
+        msg['Reply-To'] = requester_email
+        msg['Subject'] = f"Someone wants to connect with you about {person_name}"
+        
+        body = f"""You have received a private contact request through CheckMate.
+
+Someone is trying to reach you regarding: {person_name}
+
+Their message:
+{message}
+
+Their email: {requester_email}
+
+You can reply directly to this email to respond to them.
+
+---
+This is an automated message from CheckMate.
+"""
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        print(f"Contact request email sent to {uploader_email}", flush=True)
+    except Exception as e:
+        print(f"Failed to send contact request email: {e}", flush=True)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -163,6 +201,56 @@ def watch():
         print(f"Error in watch route: {e}", flush=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/save-contact-preference', methods=['POST'])
+def save_contact_preference():
+    if faces_collection is None:
+        return jsonify({"status": "error", "message": "Database connection not established."}), 500
+    
+    try:
+        data = request.get_json()
+        submission_id = data.get('submission_id')
+        contact_email = data.get('contact_email')
+        allow_contact = data.get('allow_contact')
+        
+        if not submission_id or not contact_email:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Update the submission with contact preferences
+        result = faces_collection.update_one(
+            {"_id": ObjectId(submission_id)},
+            {"$set": {"contact_email": contact_email, "allow_contact": allow_contact}}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"status": "success", "message": "Contact preferences saved!"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Could not update preferences"}), 400
+        
+    except Exception as e:
+        print(f"Error saving contact preference: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/contact-uploader', methods=['POST'])
+def contact_uploader():
+    try:
+        data = request.get_json()
+        uploader_email = data.get('uploader_email')
+        requester_email = data.get('requester_email')
+        message = data.get('message')
+        person_name = data.get('person_name')
+        
+        if not all([uploader_email, requester_email, message, person_name]):
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Send email to uploader
+        send_contact_request_email(uploader_email, requester_email, message, person_name)
+        
+        return jsonify({"status": "success", "message": "Contact request sent!"}), 200
+        
+    except Exception as e:
+        print(f"Error in contact-uploader: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     # Graceful check if database is down
@@ -222,8 +310,24 @@ def submit_and_check():
                     "start_date": rec.get('start_date', 'N/A'),
                     "end_date": rec.get('end_date', 'Present'),
                     "city": rec.get('city', 'Unknown'),
-                    "review_text": rec.get('review_text', 'No comments provided.')
+                    "review_text": rec.get('review_text', 'No comments provided.'),
+                    "contact_email": rec.get('contact_email')  # Include contact email if available
                 })
+            
+            # Store the NEW submission even though it's a match
+            insert_result = faces_collection.insert_one({
+                "name": matched_name,
+                "email": submitter_email,
+                "city": city,
+                "start_date": start_date,
+                "end_date": end_date,
+                "review_text": review_text,
+                "image": image,
+                "encoding": current_encoding.tolist(),
+                "allow_contact": False  # Default to false until user opts in
+            })
+            
+            submission_id = str(insert_result.inserted_id)
             
             # Generate unique result ID and cache the results
             result_id = secrets.token_urlsafe(16)
@@ -259,20 +363,24 @@ def submit_and_check():
                 "history": history,
                 "start_date": start_date,
                 "end_date": end_date,
-                "city": city
+                "city": city,
+                "submission_id": submission_id
             }), 200
         else:
             # Store the NEW submission with all details
-            faces_collection.insert_one({
+            insert_result = faces_collection.insert_one({
                 "name": name,
                 "email": submitter_email,
                 "city": city,
                 "start_date": start_date,
                 "end_date": end_date,
                 "review_text": review_text,
-                "image": image,  # Store the image for history
-                "encoding": current_encoding.tolist()
+                "image": image,
+                "encoding": current_encoding.tolist(),
+                "allow_contact": False  # Default to false until user opts in
             })
+            
+            submission_id = str(insert_result.inserted_id)
             
             return jsonify({
                 "status": "success", 
@@ -280,7 +388,8 @@ def submit_and_check():
                 "message": "No match found. Added to database.",
                 "start_date": start_date,
                 "end_date": end_date,
-                "city": city
+                "city": city,
+                "submission_id": submission_id
             }), 200
 
     except Exception as e:
