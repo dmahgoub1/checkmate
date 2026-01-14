@@ -79,6 +79,10 @@ def search_page():
 def results_page():
     return render_template('results.html')
 
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     # Graceful check if database is down
