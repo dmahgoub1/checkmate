@@ -26,6 +26,12 @@
         .history-photo { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
         .detail-label { color: #555; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
         .detail-value { font-size: 1.1rem; margin-bottom: 15px; }
+        .btn-contact { background: #fff; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 10px; transition: 0.3s; }
+        .btn-contact:hover { background: var(--brand); color: #fff; }
+        .contact-box { display: none; margin-top: 15px; background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; }
+        .contact-textarea { width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-family: inherit; margin-bottom: 10px; box-sizing: border-box; resize: vertical; }
+        .contact-input { width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; font-family: inherit; margin-bottom: 10px; box-sizing: border-box; }
+        .btn-send-request { background: var(--brand); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; }
         .btn-action { background: var(--brand); color: #fff; border: none; padding: 18px; border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%; max-width: 500px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .btn-secondary { background: #222; }
         .loading { text-align: center; color: #888; padding: 40px; }
@@ -56,6 +62,42 @@
 
     <script>
         const resultId = "{{ result_id }}";
+        let currentMatchedName = "";
+
+        function toggleContactForm(index) {
+            const form = document.getElementById(`contact-form-${index}`);
+            form.style.display = form.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function sendContactRequest(uploaderEmail, historyIndex) {
+            const message = document.getElementById(`msg-${historyIndex}`).value;
+            const requesterEmail = document.getElementById(`email-${historyIndex}`).value;
+            
+            if (!message) return alert("Please enter a message.");
+            if (!requesterEmail) return alert("Please enter your email.");
+            
+            try {
+                const response = await fetch('/contact-uploader', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        uploader_email: uploaderEmail,
+                        requester_email: requesterEmail,
+                        message: message,
+                        person_name: currentMatchedName
+                    })
+                });
+                const res = await response.json();
+                if (res.status === 'success') {
+                    alert("Contact request sent! The uploader will receive your message.");
+                    toggleContactForm(historyIndex);
+                } else { 
+                    alert("Error: " + res.message); 
+                }
+            } catch (err) { 
+                alert("Failed to send request."); 
+            }
+        }
 
         async function loadResults() {
             try {
@@ -72,6 +114,7 @@
                 const statusBox = document.getElementById('status-box');
                 
                 if (data.match) {
+                    currentMatchedName = data.match;
                     statusBox.className = 'status-banner match';
                     statusBox.innerText = "⚠️ Match Found";
                     document.getElementById('result-title').innerText = "Subject Identified";
@@ -91,6 +134,15 @@
                 if (data.history && data.history.length > 0) {
                     document.getElementById('history-title').style.display = 'block';
                     data.history.forEach((item, index) => {
+                        const contactButton = item.contact_email ? 
+                            `<button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
+                             <div id="contact-form-${index}" class="contact-box">
+                                 <input type="email" id="email-${index}" class="contact-input" placeholder="Your email address">
+                                 <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out..."></textarea>
+                                 <button class="btn-send-request" onclick="sendContactRequest('${item.contact_email}', ${index})">Send Private Request</button>
+                             </div>` : 
+                            '<p style="font-size: 0.75rem; color: #555; margin-top: 10px;">This user has not opted in to be contacted.</p>';
+
                         historyCont.innerHTML += `
                             <div class="result-card" style="border-left: 4px solid var(--brand);">
                                 ${item.image_data ? `<img src="${item.image_data}" class="history-photo" alt="Historical Record">` : ''}
@@ -100,6 +152,7 @@
                                 <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
                                 <div class="detail-label">Comments</div>
                                 <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
+                                ${contactButton}
                             </div>`;
                     });
                 } else { 

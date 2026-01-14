@@ -39,6 +39,12 @@
         .watch-container { margin-top: 20px; border-top: 1px solid #333; padding-top: 20px; }
         .watch-input { width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
 
+        /* Contact Opt-in Styles */
+        .contact-optin-container { margin-top: 20px; border-top: 1px solid #333; padding-top: 20px; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .checkbox-container label { cursor: pointer; font-size: 0.9rem; color: #ccc; }
+
         .site-footer { width: 100%; margin-top: 60px; padding: 40px 20px 30px; background: rgba(20, 20, 20, 0.5); border-top: 1px solid #222; }
         .footer-content { max-width: 1200px; margin: 0 auto; text-align: center; }
         .footer-link { color: #888; text-decoration: none; font-size: 0.9rem; transition: color 0.3s ease; font-weight: 500; }
@@ -63,6 +69,19 @@
             <input type="email" id="watch-email" class="watch-input" placeholder="Enter your email address">
             <button class="btn-send-request" onclick="subscribeToWatch()">Watch This Identity</button>
         </div>
+
+        <div id="contact-optin-section" class="contact-optin-container">
+            <div class="detail-label">Allow Others To Contact You</div>
+            <p style="font-size: 0.75rem; color: #888; margin-bottom: 15px;">If someone else uploads a photo of this person and wants to reach out, would you like to be contactable?</p>
+            <div class="checkbox-container">
+                <input type="checkbox" id="allow-contact-checkbox">
+                <label for="allow-contact-checkbox">Yes, allow others to send me private contact requests</label>
+            </div>
+            <div id="contact-email-input" style="display: none;">
+                <input type="email" id="contact-email" class="watch-input" placeholder="Enter your email for contact requests">
+                <button class="btn-send-request" onclick="saveContactPreference()">Save Contact Preference</button>
+            </div>
+        </div>
     </div>
 
     <h3 style="color: var(--brand); margin-top: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Historical Database Records</h3>
@@ -73,6 +92,13 @@
 
     <script>
         let currentMatchedName = "";
+        let currentSubmissionId = "";
+
+        // Toggle contact email input when checkbox is clicked
+        document.getElementById('allow-contact-checkbox').addEventListener('change', function() {
+            const emailInput = document.getElementById('contact-email-input');
+            emailInput.style.display = this.checked ? 'block' : 'none';
+        });
 
         function toggleContactForm(index) {
             const form = document.getElementById(`contact-form-${index}`);
@@ -95,21 +121,59 @@
             } catch (err) { alert("Failed to set watch request."); }
         }
 
-        async function sendContactRequest(targetName, index) {
-            const message = document.getElementById(`msg-${index}`).value;
+        async function saveContactPreference() {
+            const email = document.getElementById('contact-email').value;
+            if (!email) return alert("Please enter a valid email.");
+            
+            try {
+                const response = await fetch('/save-contact-preference', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        submission_id: currentSubmissionId,
+                        contact_email: email,
+                        allow_contact: true
+                    })
+                });
+                const res = await response.json();
+                alert(res.message);
+                if (res.status === 'success') {
+                    document.getElementById('contact-optin-section').style.display = 'none';
+                }
+            } catch (err) { 
+                console.error(err);
+                alert("Failed to save contact preference."); 
+            }
+        }
+
+        async function sendContactRequest(uploaderEmail, historyIndex) {
+            const message = document.getElementById(`msg-${historyIndex}`).value;
+            const requesterEmail = prompt("Please enter your email so the uploader can respond:");
+            
             if (!message) return alert("Please enter a message.");
+            if (!requesterEmail) return alert("Email is required to send a contact request.");
+            
             try {
                 const response = await fetch('/contact-uploader', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target_name: targetName, message: message })
+                    body: JSON.stringify({ 
+                        uploader_email: uploaderEmail,
+                        requester_email: requesterEmail,
+                        message: message,
+                        person_name: currentMatchedName
+                    })
                 });
                 const res = await response.json();
                 if (res.status === 'success') {
-                    alert("Request sent!");
-                    toggleContactForm(index);
-                } else { alert("Error: " + res.message); }
-            } catch (err) { alert("Failed to send request."); }
+                    alert("Contact request sent!");
+                    toggleContactForm(historyIndex);
+                } else { 
+                    alert("Error: " + res.message); 
+                }
+            } catch (err) { 
+                alert("Failed to send request."); 
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -117,6 +181,9 @@
             if (!rawData) { document.getElementById('result-title').innerText = "No Data Found"; return; }
             const data = JSON.parse(rawData);
             const statusBox = document.getElementById('status-box');
+
+            // Store submission ID for contact preferences
+            currentSubmissionId = data.submission_id || "";
 
             if (data.status === 'success' && data.match) {
                 currentMatchedName = data.match;
@@ -140,6 +207,14 @@
             const historyCont = document.getElementById('history-container');
             if (data.history && data.history.length > 0) {
                 data.history.forEach((item, index) => {
+                    const contactButton = item.contact_email ? 
+                        `<button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
+                         <div id="contact-form-${index}" class="contact-box">
+                             <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out..."></textarea>
+                             <button class="btn-send-request" onclick="sendContactRequest('${item.contact_email}', ${index})">Send Private Request</button>
+                         </div>` : 
+                        '<p style="font-size: 0.75rem; color: #555; margin-top: 10px;">This user has not opted in to be contacted.</p>';
+
                     historyCont.innerHTML += `
                         <div class="result-card" style="border-left: 4px solid var(--brand);">
                             ${item.image_data ? `<img src="${item.image_data}" class="history-photo" alt="Historical Record">` : ''}
@@ -149,11 +224,7 @@
                             <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
                             <div class="detail-label">Comments</div>
                             <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
-                            <button class="btn-contact" onclick="toggleContactForm(${index})">Contact This User Privately</button>
-                            <div id="contact-form-${index}" class="contact-box">
-                                <textarea id="msg-${index}" class="contact-textarea" placeholder="Explain why you want to reach out..."></textarea>
-                                <button class="btn-send-request" onclick="sendContactRequest('${data.match}', ${index})">Send Private Request</button>
-                            </div>
+                            ${contactButton}
                         </div>`;
                 });
             } else { 
