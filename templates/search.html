@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HLYJB6WHLG"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -91,7 +90,6 @@
             line-height: 1.4;
         }
         
-        /* Upload Container - Enhanced but functionality preserved */
         .upload-container { 
             background: var(--card-bg);
             border: 2px dashed var(--border);
@@ -139,7 +137,6 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.3);
         }
         
-        /* Form styling - Enhanced but structure preserved */
         .form-group { 
             width: 100%;
             display: flex; 
@@ -248,7 +245,6 @@
             transform: none;
         }
 
-        /* Loading Overlay - Preserved functionality, enhanced visuals */
         #loading-overlay { 
             display: none;
             position: fixed; 
@@ -294,7 +290,6 @@
             input, textarea { font-size: 0.9rem; padding: 14px 16px; }
         }
 
-        /* Footer Styles */
         .site-footer {
             width: 100%;
             margin-top: 60px;
@@ -335,36 +330,10 @@
             font-size: 0.9rem;
         }
 
-        .footer-contact {
-            margin-bottom: 12px;
-        }
-
-        .footer-email {
-            color: var(--brand);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: opacity 0.3s ease;
-        }
-
-        .footer-email:hover {
-            opacity: 0.8;
-        }
-
         .footer-copyright {
             color: #555;
             font-size: 0.8rem;
             font-weight: 400;
-        }
-
-        @media (max-width: 480px) {
-            .footer-links {
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .footer-divider {
-                display: none;
-            }
         }
     </style>
 </head>
@@ -419,12 +388,34 @@
         fileInput.onchange = e => {
             const file = e.target.files[0];
             if (!file) return;
+            
             const reader = new FileReader();
             reader.onload = () => {
-                base64Image = reader.result;
-                preview.src = base64Image;
-                preview.style.display = "block";
-                uploadText.style.display = "none";
+                const img = new Image();
+                img.onload = () => {
+                    // Create a canvas to resize the image
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // Limit width to 800px for server safety
+                    const scaleSize = MAX_WIDTH / img.width;
+                    
+                    if (img.width > MAX_WIDTH) {
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                    } else {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Convert to JPEG with 70% quality to reduce payload size
+                    base64Image = canvas.toDataURL('image/jpeg', 0.7);
+                    preview.src = base64Image;
+                    preview.style.display = "block";
+                    uploadText.style.display = "none";
+                };
+                img.src = reader.result;
             };
             reader.readAsDataURL(file);
         };
@@ -456,8 +447,6 @@
                 if (result.status === "success" || result.status === "no_face_detected") {
                     sessionStorage.setItem('lastResult', JSON.stringify(result));
                     
-                    // Use a slight delay and ensure the path is absolute
-                    // This gives Safari time to clear the previous POST state
                     setTimeout(() => {
                         window.location.replace('/results'); 
                     }, 100);
@@ -477,7 +466,7 @@
             <div class="footer-links">
                 <a href="{{ url_for('terms') }}" class="footer-link">Terms of Service</a>
                 <span class="footer-divider">•</span>
-                            </div>
+            </div>
             <div class="footer-copyright">
                 © 2026 CheckMate. All rights reserved.
             </div>
