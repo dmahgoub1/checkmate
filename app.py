@@ -91,17 +91,19 @@ def submit_and_check():
 
     try:
         data = request.get_json()
-        image_data = data.get('image')
+        image = data.get('image')
         name = data.get('name')
-        email = data.get('email')
         city = data.get('city')
-        comments = data.get('comments')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        review_text = data.get('review_text')
+        submitter_email = data.get('submitter_email')
 
-        if not image_data:
+        if not image:
             return jsonify({"status": "error", "message": "No image provided"}), 400
 
         # Decode image
-        header, encoded = image_data.split(",", 1)
+        header, encoded = image.split(",", 1)
         image_bytes = base64.b64decode(encoded)
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -129,22 +131,52 @@ def submit_and_check():
                 break
 
         if match_found:
+            # Fetch ALL historical records for this matched person
+            history_records = list(faces_collection.find({"name": matched_name}))
+            
+            # Format history for frontend
+            history = []
+            for rec in history_records:
+                history.append({
+                    "image_data": rec.get('image'),
+                    "start_date": rec.get('start_date', 'N/A'),
+                    "end_date": rec.get('end_date', 'Present'),
+                    "city": rec.get('city', 'Unknown'),
+                    "review_text": rec.get('review_text', 'No comments provided.')
+                })
+            
             send_alert_email(matched_name)
+            
             return jsonify({
                 "status": "success",
                 "match": matched_name,
-                "message": f"Match found: {matched_name}. Notification sent."
+                "message": f"Match found: {matched_name}. Notification sent.",
+                "history": history,
+                "start_date": start_date,
+                "end_date": end_date,
+                "city": city
             }), 200
         else:
-            # Store as a "watch request" if no match
-            watch_collection.insert_one({
+            # Store the NEW submission with all details
+            faces_collection.insert_one({
                 "name": name,
-                "email": email,
+                "email": submitter_email,
                 "city": city,
-                "comments": comments,
+                "start_date": start_date,
+                "end_date": end_date,
+                "review_text": review_text,
+                "image": image,  # Store the image for history
                 "encoding": current_encoding.tolist()
             })
-            return jsonify({"status": "success", "match": None, "message": "No match found. Added to watch list."}), 200
+            
+            return jsonify({
+                "status": "success", 
+                "match": None, 
+                "message": "No match found. Added to database.",
+                "start_date": start_date,
+                "end_date": end_date,
+                "city": city
+            }), 200
 
     except Exception as e:
         print(f"Error in submit-and-check: {e}", flush=True)
