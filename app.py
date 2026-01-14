@@ -14,152 +14,139 @@ app = Flask(__name__)
 CORS(app)
 
 # --- CONFIGURATION ---
-MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+# We retrieve variables, ensuring we handle cases where they might be missing
+MONGO_URI = os.environ.get("MONGO_URI")
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 SMTP_USER = os.environ.get("SMTP_USER")
 SMTP_PASS = os.environ.get("SMTP_PASS")
 ALERTS_EMAIL = os.environ.get("ALERTS_EMAIL")
 
-# --- DATABASE SETUP ---
-# Suggested improvement: Added timeout and connection verification to prevent silent crashes
-try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    # This triggers a call to the server to verify the connection is alive
-    client.server_info() 
-    print("Database connected successfully")
-except Exception as e:
-    print(f"DATABASE CONNECTION ERROR: {e}")
+# --- DATABASE SETUP (Defensive) ---
+# We wrap this in a try/except so a secret mapping error doesn't kill the app startup
+client = None
+db = None
+faces_collection = None
+watch_collection = None
 
-db = client.checkmate
-faces_collection = db.known_faces
-watch_collection = db.watch_requests # New collection for future notifications
+try:
+    if not MONGO_URI:
+        print("CRITICAL: MONGO_URI environment variable is missing or empty.", flush=True)
+    else:
+        # Added serverSelectionTimeoutMS so it doesn't hang forever if the URI is wrong
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        # Verify connection immediately
+        client.admin.command('ping')
+        
+        db = client.checkmate
+        faces_collection = db.known_faces
+        watch_collection = db.watch_requests
+        print("Database connected successfully!", flush=True)
+except Exception as e:
+    print(f"DATABASE CONNECTION ERROR: {e}", flush=True)
+    # We leave client/db as None; the routes will handle this gracefully later
 
 def send_alert_email(name):
-    if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]): return
-    msg = MIMEMultipart()
-    msg['From'] = SMTP_USER
-    msg['To'] = ALERTS_EMAIL
-    msg['Subject'] = f"ALERT: {name} Identified"
-    msg.attach(MIMEText(f"The individual '{name}' has been scanned and identified on Checkmate.", 'plain'))
+    if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]): 
+        print(f"Skipping email alert for {name}: SMTP settings incomplete.", flush=True)
+        return
     try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = ALERTS_EMAIL
+        msg['Subject'] = f"ALERT: {name} Identified"
+        body = f"The system has identified a person of interest: {name}.\nCheck the dashboard for details."
+        msg.attach(MIMEText(body, 'plain'))
+        
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
         server.quit()
+        print(f"Alert email sent for {name}", flush=True)
     except Exception as e:
-        print(f"Email error: {e}")
-
-def notify_watchers(matched_name):
-    watchers = watch_collection.find({"target_name": matched_name})
-    for watch in watchers:
-        user_email = watch.get('user_email')
-        if not user_email: continue
-        msg = MIMEMultipart()
-        msg['From'] = SMTP_USER; msg['To'] = user_email; msg['Subject'] = f"Checkmate Update: {matched_name} Found"
-        body = f"Hello,\n\nYou are receiving this because you 'Watched' {matched_name}. A new record or scan has just been matched to this person."
-        msg.attach(MIMEText(body, 'plain'))
-        try:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
-            server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
-        except: pass
+        print(f"Failed to send email: {e}", flush=True)
 
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/search')
+def search_page():
     return render_template('search.html')
 
 @app.route('/results')
-def results():
+def results_page():
     return render_template('results.html')
 
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
+    # Graceful check if database is down
+    if faces_collection is None:
+        return jsonify({"status": "error", "message": "Database connection not established. Check server logs."}), 500
+
     try:
         data = request.get_json()
-        image_data = data.get('image_data').split(",")[1]
+        image_data = data.get('image')
         name = data.get('name')
+        email = data.get('email')
         city = data.get('city')
-        start_date = data.get('start_date')
-        end_date = data.get('end_date')
-        review_text = data.get('review_text')
-        submitter_email = data.get('submitter_email', 'anonymous')
+        comments = data.get('comments')
 
-        img_bytes = base64.b64decode(image_data)
-        nparr = np.frombuffer(img_bytes, np.uint8)
+        if not image_data:
+            return jsonify({"status": "error", "message": "No image provided"}), 400
+
+        # Decode image
+        header, encoded = image_data.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+        nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+        # Face recognition
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         face_encodings = face_recognition.face_encodings(rgb_img)
+
         if not face_encodings:
             return jsonify({"status": "no_face_detected", "message": "No face found in image."}), 200
 
-        new_encoding = face_encodings[0]
+        current_encoding = face_encodings[0]
         
-        # Check against database
+        # Pull all known faces from DB
         all_records = list(faces_collection.find())
         match_found = False
-        matched_name = ""
+        matched_name = None
 
         for record in all_records:
-            db_encoding = np.array(record['encoding'])
-            results = face_recognition.compare_faces([db_encoding], new_encoding, tolerance=0.5)
+            known_encoding = np.array(record['encoding'])
+            results = face_recognition.compare_faces([known_encoding], current_encoding, tolerance=0.6)
             if results[0]:
                 match_found = True
                 matched_name = record['name']
                 break
 
-        # Save current entry
-        new_face = {
-            "name": name, "city": city, "start_date": start_date, "end_date": end_date,
-            "review_text": review_text, "encoding": new_encoding.tolist(),
-            "submitter_email": submitter_email
-        }
-        faces_collection.insert_one(new_face)
-
         if match_found:
             send_alert_email(matched_name)
-            notify_watchers(matched_name)
-            history = list(faces_collection.find({"name": matched_name}, {"_id": 0, "encoding": 0}))
-            return jsonify({"status": "success", "match": matched_name, "history": history}), 200
+            return jsonify({
+                "status": "success",
+                "match": matched_name,
+                "message": f"Match found: {matched_name}. Notification sent."
+            }), 200
         else:
-            return jsonify({"status": "success", "match": None}), 200
+            # Store as a "watch request" if no match
+            watch_collection.insert_one({
+                "name": name,
+                "email": email,
+                "city": city,
+                "comments": comments,
+                "encoding": current_encoding.tolist()
+            })
+            return jsonify({"status": "success", "match": None, "message": "No match found. Added to watch list."}), 200
 
     except Exception as e:
+        print(f"Error in submit-and-check: {e}", flush=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/add-watch', methods=['POST'])
-def add_watch():
-    try:
-        data = request.get_json()
-        watch_collection.insert_one({
-            "target_name": data.get('target_name'),
-            "user_email": data.get('user_email')
-        })
-        return jsonify({"status": "success", "message": "You will be notified of future matches."}), 200
-    except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route('/contact-uploader', methods=['POST'])
-def contact_uploader():
-    try:
-        data = request.get_json()
-        target_name = data.get('target_name')
-        message_content = data.get('message')
-        original_record = faces_collection.find_one({"name": target_name})
-        if not original_record or 'submitter_email' not in original_record:
-            return jsonify({"status": "error", "message": "Uploader contact info unavailable."}), 404
-        dest_email = original_record['submitter_email']
-        msg = MIMEMultipart()
-        msg['From'] = SMTP_USER; msg['To'] = dest_email; msg['Subject'] = f"Checkmate Inquiry: {target_name}"
-        body = (f"Hello,\n\nA user has found a match for '{target_name}' and wishes to connect.\n\n"
-                f"Message from the user:\n--------------------------------------------------\n"
-                f"{message_content}\n--------------------------------------------------\n\n"
-                f"To respond, you may reply directly to this email.")
-        msg.attach(MIMEText(body, 'plain'))
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
-        server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
-        return jsonify({"status": "success", "message": "Inquiry sent privately."}), 200
-    except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    # Use environment port for Code Engine compatibility
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
