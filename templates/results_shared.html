@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HLYJB6WHLG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-HLYJB6WHLG');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkmate - Results</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        :root { --brand: #ff4b81; --dark: #000; }
+        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .logo { width: 140px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .slogan { color: var(--brand); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
+        .status-banner { width: 100%; max-width: 500px; padding: 20px; border-radius: 15px; font-weight: 700; margin-bottom: 25px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+        .match { background: rgba(255, 75, 129, 0.2); border: 1px solid var(--brand); color: var(--brand); }
+        .no-match { background: #1a1a1a; border: 1px solid #333; color: #888; }
+        .result-card { background: #111; border: 1px solid #222; border-radius: 20px; width: 100%; max-width: 500px; padding: 25px; box-sizing: border-box; margin-bottom: 20px; }
+        .history-photo { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .detail-label { color: #555; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .detail-value { font-size: 1.1rem; margin-bottom: 15px; }
+        .btn-action { background: var(--brand); color: #fff; border: none; padding: 18px; border-radius: 50px; font-weight: 700; cursor: pointer; width: 100%; max-width: 500px; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .btn-secondary { background: #222; }
+        .loading { text-align: center; color: #888; padding: 40px; }
+
+        .site-footer { width: 100%; margin-top: 60px; padding: 40px 20px 30px; background: rgba(20, 20, 20, 0.5); border-top: 1px solid #222; }
+        .footer-content { max-width: 1200px; margin: 0 auto; text-align: center; }
+        .footer-link { color: #888; text-decoration: none; font-size: 0.9rem; transition: color 0.3s ease; font-weight: 500; }
+        .footer-link:hover { color: var(--brand); }
+        .footer-copyright { color: #555; font-size: 0.8rem; font-weight: 400; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Checkmate" class="logo">
+    <div class="header"><div class="slogan">Scan Results</div><h2 id="result-title">Loading...</h2></div>
+    <div id="status-box" class="status-banner">Loading Records...</div>
+    
+    <div id="main-card" class="result-card" style="display: none;">
+        <div class="detail-label">Name</div><div id="display-name" class="detail-value">--</div>
+        <div class="detail-label">Dates (Start and End)</div><div id="display-timeline" class="detail-value">--</div>
+        <div class="detail-label">City</div><div id="display-city" class="detail-value">--</div>
+    </div>
+
+    <h3 id="history-title" style="color: var(--brand); margin-top: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; display: none;">Historical Database Records</h3>
+    <div id="history-container" style="width: 100%; max-width: 500px;"></div>
+    
+    <a href="/search" class="btn-action" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">Run New Scan</a>    
+    <a href="/" class="btn-action btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">Return Home</a>
+
+    <script>
+        const resultId = "{{ result_id }}";
+
+        async function loadResults() {
+            try {
+                const response = await fetch(`/api/results/${resultId}`);
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    document.getElementById('result-title').innerText = "Results Not Found";
+                    document.getElementById('status-box').className = 'status-banner no-match';
+                    document.getElementById('status-box').innerText = "Link Expired or Invalid";
+                    return;
+                }
+
+                const statusBox = document.getElementById('status-box');
+                
+                if (data.match) {
+                    statusBox.className = 'status-banner match';
+                    statusBox.innerText = "⚠️ Match Found";
+                    document.getElementById('result-title').innerText = "Subject Identified";
+                    document.getElementById('display-name').innerText = data.match;
+                    document.getElementById('main-card').style.display = 'block';
+                } else {
+                    statusBox.className = 'status-banner no-match';
+                    statusBox.innerText = "No Records Found";
+                    document.getElementById('display-name').innerText = "Unknown Identity";
+                    document.getElementById('main-card').style.display = 'block';
+                }
+                
+                document.getElementById('display-timeline').innerText = `${data.start_date || 'N/A'} — ${data.end_date || 'Present'}`;
+                document.getElementById('display-city').innerText = data.city || "Not Specified";
+
+                const historyCont = document.getElementById('history-container');
+                if (data.history && data.history.length > 0) {
+                    document.getElementById('history-title').style.display = 'block';
+                    data.history.forEach((item, index) => {
+                        historyCont.innerHTML += `
+                            <div class="result-card" style="border-left: 4px solid var(--brand);">
+                                ${item.image_data ? `<img src="${item.image_data}" class="history-photo" alt="Historical Record">` : ''}
+                                <div class="detail-label">Dates (Start and End)</div>
+                                <div class="detail-value" style="font-size:0.95rem;">${item.start_date} to ${item.end_date || 'Present'}</div>
+                                <div class="detail-label">City</div>
+                                <div class="detail-value" style="font-size:0.95rem;">${item.city}</div>
+                                <div class="detail-label">Comments</div>
+                                <p style="font-size:0.85rem; color:#ccc; margin-bottom:15px;">${item.review_text || 'No comments provided.'}</p>
+                            </div>`;
+                    });
+                } else { 
+                    historyCont.innerHTML = `<p style="color: #444; text-align: center;">No previous historical records found for this person.</p>`; 
+                }
+            } catch (error) {
+                console.error('Error loading results:', error);
+                document.getElementById('result-title').innerText = "Error Loading Results";
+                document.getElementById('status-box').className = 'status-banner no-match';
+                document.getElementById('status-box').innerText = "Failed to Load Data";
+            }
+        }
+
+        // Load results when page loads
+        document.addEventListener('DOMContentLoaded', loadResults);
+    </script>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="{{ url_for('terms') }}" class="footer-link">Terms of Service</a>
+                <span class="footer-divider">•</span>
+            </div>
+            <div class="footer-copyright">© 2026 CheckMate. All rights reserved.</div>
+        </div>
+    </footer>
+</body>
+</html>
