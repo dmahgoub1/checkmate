@@ -3,6 +3,7 @@ import base64
 import smtplib
 import numpy as np
 import cv2
+import secrets
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, jsonify, render_template
@@ -28,6 +29,7 @@ client = None
 db = None
 faces_collection = None
 watch_collection = None
+results_cache_collection = None
 
 try:
     if not MONGO_URI:
@@ -41,21 +43,40 @@ try:
         db = client.checkmate
         faces_collection = db.known_faces
         watch_collection = db.watch_requests
+        results_cache_collection = db.results_cache
         print("Database connected successfully!", flush=True)
 except Exception as e:
     print(f"DATABASE CONNECTION ERROR: {e}", flush=True)
     # We leave client/db as None; the routes will handle this gracefully later
 
-def send_alert_email(name):
-    if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]): 
+def send_alert_email(name, city, start_date, end_date, review_text, recipient_email, results_link):
+    if not all([SMTP_USER, SMTP_PASS]): 
         print(f"Skipping email alert for {name}: SMTP settings incomplete.", flush=True)
         return
     try:
         msg = MIMEMultipart()
         msg['From'] = SMTP_USER
-        msg['To'] = ALERTS_EMAIL
-        msg['Subject'] = f"ALERT: {name} Identified"
-        body = f"The system has identified a person of interest: {name}.\nCheck the dashboard for details."
+        msg['To'] = recipient_email
+        msg['Subject'] = f"ALERT: {name} has been identified on CheckMate"
+        
+        body = f"""Alert: {name} has been identified in the CheckMate system!
+
+Someone has uploaded a new photo matching this person.
+
+New Activity Details:
+- Name: {name}
+- City: {city or 'Not specified'}
+- Dating Period: {start_date or 'Not specified'} to {end_date or 'Present'}
+- Comments: {review_text or 'No comments provided'}
+
+View full history and all photos for {name}:
+{results_link}
+
+---
+This is an automated alert from CheckMate.
+You received this email because you subscribed to watch alerts for {name}.
+"""
+        
         msg.attach(MIMEText(body, 'plain'))
         
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
@@ -63,9 +84,9 @@ def send_alert_email(name):
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
         server.quit()
-        print(f"Alert email sent for {name}", flush=True)
+        print(f"Alert email sent to {recipient_email} for {name}", flush=True)
     except Exception as e:
-        print(f"Failed to send email: {e}", flush=True)
+        print(f"Failed to send email to {recipient_email}: {e}", flush=True)
 
 @app.route('/')
 def index():
@@ -79,14 +100,73 @@ def search_page():
 def results_page():
     return render_template('results.html')
 
+@app.route('/results/<result_id>')
+def results_by_id(result_id):
+    return render_template('results_shared.html', result_id=result_id)
+
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
 
+@app.route('/api/results/<result_id>', methods=['GET'])
+def get_results(result_id):
+    if results_cache_collection is None:
+        return jsonify({"status": "error", "message": "Database connection not established."}), 500
+    
+    try:
+        cached_result = results_cache_collection.find_one({"result_id": result_id})
+        
+        if not cached_result:
+            return jsonify({"status": "error", "message": "Results not found or expired."}), 404
+        
+        # Return the cached results data
+        return jsonify({
+            "status": "success",
+            "match": cached_result.get('match'),
+            "history": cached_result.get('history'),
+            "start_date": cached_result.get('start_date'),
+            "end_date": cached_result.get('end_date'),
+            "city": cached_result.get('city')
+        }), 200
+        
+    except Exception as e:
+        print(f"Error retrieving results: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/watch', methods=['POST'])
+def watch():
+    if watch_collection is None:
+        return jsonify({"status": "error", "message": "Database connection not established."}), 500
+    
+    try:
+        data = request.get_json()
+        target_name = data.get('target_name')
+        email = data.get('email')
+        
+        if not target_name or not email:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Check if watch already exists
+        existing = watch_collection.find_one({"target_name": target_name, "email": email})
+        if existing:
+            return jsonify({"status": "info", "message": "You're already watching this person."}), 200
+        
+        # Create new watch request
+        watch_collection.insert_one({
+            "target_name": target_name,
+            "email": email
+        })
+        
+        return jsonify({"status": "success", "message": "Watch request created! You'll be notified of future matches."}), 200
+        
+    except Exception as e:
+        print(f"Error in watch route: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     # Graceful check if database is down
-    if faces_collection is None:
+    if faces_collection is None or results_cache_collection is None:
         return jsonify({"status": "error", "message": "Database connection not established. Check server logs."}), 500
 
     try:
@@ -145,7 +225,32 @@ def submit_and_check():
                     "review_text": rec.get('review_text', 'No comments provided.')
                 })
             
-            send_alert_email(matched_name)
+            # Generate unique result ID and cache the results
+            result_id = secrets.token_urlsafe(16)
+            results_cache_collection.insert_one({
+                "result_id": result_id,
+                "match": matched_name,
+                "history": history,
+                "start_date": start_date,
+                "end_date": end_date,
+                "city": city
+            })
+            
+            # Create shareable link
+            results_link = f"https://thecheckmateapp.com/results/{result_id}"
+            
+            # Send alerts to all watchers for this person
+            watchers = list(watch_collection.find({"target_name": matched_name}))
+            for watcher in watchers:
+                send_alert_email(
+                    name=matched_name,
+                    city=city,
+                    start_date=start_date,
+                    end_date=end_date,
+                    review_text=review_text,
+                    recipient_email=watcher['email'],
+                    results_link=results_link
+                )
             
             return jsonify({
                 "status": "success",
