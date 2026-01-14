@@ -22,10 +22,18 @@ SMTP_PASS = os.environ.get("SMTP_PASS")
 ALERTS_EMAIL = os.environ.get("ALERTS_EMAIL")
 
 # --- DATABASE SETUP ---
-client = MongoClient(MONGO_URI)
+# Suggested improvement: Added timeout and connection verification to prevent silent crashes
+try:
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    # This triggers a call to the server to verify the connection is alive
+    client.server_info() 
+    print("Database connected successfully")
+except Exception as e:
+    print(f"DATABASE CONNECTION ERROR: {e}")
+
 db = client.checkmate
 faces_collection = db.known_faces
-notifications_collection = db.notifications  # New collection for email subscriptions
+watch_collection = db.watch_requests # New collection for future notifications
 
 def send_alert_email(name):
     if not all([SMTP_USER, SMTP_PASS, ALERTS_EMAIL]): return
@@ -33,186 +41,102 @@ def send_alert_email(name):
     msg['From'] = SMTP_USER
     msg['To'] = ALERTS_EMAIL
     msg['Subject'] = f"ALERT: {name} Identified"
-    msg.attach(MIMEText(f"The individual {name} was identified in a scan.", 'plain'))
-    try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
-        server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
-    except Exception as e: print(f"Email error: {e}")
-
-def send_subscriber_notification(subscriber_email, person_name, new_record):
-    """Send notification to subscriber about new upload matching their search"""
-    if not all([SMTP_USER, SMTP_PASS]): return
-    msg = MIMEMultipart()
-    msg['From'] = SMTP_USER
-    msg['To'] = subscriber_email
-    msg['Subject'] = f"Checkmate Alert: New Report for {person_name}"
-    
-    body = (
-        f"Hello,\n\n"
-        f"You subscribed to receive alerts about '{person_name}' on Checkmate.\n\n"
-        f"A new report has been submitted:\n"
-        f"--------------------------------------------------\n"
-        f"Name: {person_name}\n"
-        f"City: {new_record.get('city', 'Not specified')}\n"
-        f"Dates: {new_record.get('start_date', 'N/A')} to {new_record.get('end_date', 'Present')}\n"
-        f"Comments: {new_record.get('review_text', 'No comments provided')}\n"
-        f"--------------------------------------------------\n\n"
-        f"Log in to Checkmate to view full details.\n\n"
-        f"To unsubscribe from these alerts, please contact support.\n\n"
-        f"Best regards,\n"
-        f"Checkmate Team"
-    )
-    msg.attach(MIMEText(body, 'plain'))
-    
+    msg.attach(MIMEText(f"The individual '{name}' has been scanned and identified on Checkmate.", 'plain'))
     try:
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
         server.quit()
-        print(f"Notification sent to {subscriber_email}")
     except Exception as e:
-        print(f"Notification email error: {e}")
+        print(f"Email error: {e}")
 
-def notify_subscribers(person_name, new_record):
-    """Check for subscribers and notify them of new uploads"""
-    try:
-        # Find all subscribers for this person
-        subscribers = notifications_collection.find({"person_name": person_name})
-        
-        for sub in subscribers:
-            send_subscriber_notification(sub['email'], person_name, new_record)
-    except Exception as e:
-        print(f"Error notifying subscribers: {e}")
+def notify_watchers(matched_name):
+    watchers = watch_collection.find({"target_name": matched_name})
+    for watch in watchers:
+        user_email = watch.get('user_email')
+        if not user_email: continue
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER; msg['To'] = user_email; msg['Subject'] = f"Checkmate Update: {matched_name} Found"
+        body = f"Hello,\n\nYou are receiving this because you 'Watched' {matched_name}. A new record or scan has just been matched to this person."
+        msg.attach(MIMEText(body, 'plain'))
+        try:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT); server.starttls()
+            server.login(SMTP_USER, SMTP_PASS); server.send_message(msg); server.quit()
+        except: pass
 
 @app.route('/')
-def index(): return render_template('index.html')
-
-@app.route('/search', methods=['GET', 'POST'], strict_slashes=False)
-def search():
+def index():
     return render_template('search.html')
 
-@app.route('/results', methods=['GET', 'POST'], strict_slashes=False)
+@app.route('/results')
 def results():
     return render_template('results.html')
-
-@app.route('/terms')
-def terms():
-    return render_template('terms.html')
-
-@app.route('/subscribe-notifications', methods=['POST'])
-def subscribe_notifications():
-    """Handle email subscription for notifications about a person"""
-    try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        person_name = data.get('person_name', '').strip()
-        search_data = data.get('search_data', {})
-        
-        if not email or '@' not in email:
-            return jsonify({"status": "error", "message": "Invalid email address"}), 400
-        
-        if not person_name:
-            return jsonify({"status": "error", "message": "Person name is required"}), 400
-        
-        # Check if subscription already exists
-        existing = notifications_collection.find_one({
-            "email": email,
-            "person_name": person_name
-        })
-        
-        if existing:
-            return jsonify({"status": "success", "message": "Already subscribed"}), 200
-        
-        # Create new subscription
-        subscription = {
-            "email": email,
-            "person_name": person_name,
-            "search_data": search_data,  # Store original search parameters
-            "created_at": search_data.get('start_date', '')
-        }
-        
-        notifications_collection.insert_one(subscription)
-        
-        return jsonify({
-            "status": "success",
-            "message": "Successfully subscribed to notifications"
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     try:
         data = request.get_json()
-        raw_name = data.get('name', 'Unknown')
-        normalized_name = raw_name.lower().strip() 
+        image_data = data.get('image_data').split(",")[1]
+        name = data.get('name')
+        city = data.get('city')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        review_text = data.get('review_text')
+        submitter_email = data.get('submitter_email', 'anonymous')
 
-        header, encoded = data['image_data'].split(",", 1)
-        image_bytes = base64.b64decode(encoded)
-        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_bytes = base64.b64decode(image_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        unknown_encodings = face_recognition.face_encodings(rgb_img)
-        if not unknown_encodings: return jsonify({"status": "no_face_detected"}), 200
+        face_encodings = face_recognition.face_encodings(rgb_img)
+        if not face_encodings:
+            return jsonify({"status": "no_face_detected", "message": "No face found in image."}), 200
 
-        known_faces_data = list(faces_collection.find())
-        display_name = "Unknown"; history = []; overlaps = []
+        new_encoding = face_encodings[0]
+        
+        # Check against database
+        all_records = list(faces_collection.find())
+        match_found = False
+        matched_name = ""
 
-        if known_faces_data:
-            known_encs = [np.array(f['encoding']) for f in known_faces_data]
-            known_names = [f['name'] for f in known_faces_data]
-            matches = face_recognition.compare_faces(known_encs, unknown_encodings[0])
-            
-            if True in matches:
-                display_name = known_names[matches.index(True)]
-                # History now includes image_data
-                history = list(faces_collection.find({"name": display_name}, {"_id": 0, "encoding": 0, "submitter_email": 0}))
-                
-                user_start = data.get('start_date')
-                user_end = data.get('end_date') or "9999-12-31"
-                
-                for record in history:
-                    rec_start = record.get('start_date')
-                    rec_end = record.get('end_date') or "9999-12-31"
-                    if user_start and rec_start:
-                        if user_start <= rec_end and user_end >= rec_start:
-                            overlaps.append({"city": record.get('city'), "dates": f"{rec_start} to {record.get('end_date') or 'Present'}"})
+        for record in all_records:
+            db_encoding = np.array(record['encoding'])
+            results = face_recognition.compare_faces([db_encoding], new_encoding, tolerance=0.5)
+            if results[0]:
+                match_found = True
+                matched_name = record['name']
+                break
 
-        # Save current submission to database
-        final_name = display_name if display_name != "Unknown" else normalized_name
+        # Save current entry
         new_face = {
-            "name": final_name,
-            "encoding": unknown_encodings[0].tolist(),
-            "image_data": data['image_data'], # SAVES THE PHOTO
-            "city": data.get('city'),
-            "start_date": data.get('start_date'),
-            "end_date": data.get('end_date'),
-            "review_text": data.get('review_text'),
-            "submitter_email": data.get('submitter_email')
+            "name": name, "city": city, "start_date": start_date, "end_date": end_date,
+            "review_text": review_text, "encoding": new_encoding.tolist(),
+            "submitter_email": submitter_email
         }
         faces_collection.insert_one(new_face)
-        
-        # Notify subscribers about this new upload
-        notify_subscribers(final_name, new_face)
-        
-        if display_name == "Unknown": display_name = normalized_name
 
-        if data.get('submitter_email') != "anonymous" and display_name != "Unknown": 
-            send_alert_email(display_name)
+        if match_found:
+            send_alert_email(matched_name)
+            notify_watchers(matched_name)
+            history = list(faces_collection.find({"name": matched_name}, {"_id": 0, "encoding": 0}))
+            return jsonify({"status": "success", "match": matched_name, "history": history}), 200
+        else:
+            return jsonify({"status": "success", "match": None}), 200
 
-        return jsonify({
-            "status": "success",
-            "match": display_name,
-            "city": data.get('city'),
-            "details": data.get('review_text'),
-            "start_date": data.get('start_date'),
-            "end_date": data.get('end_date'),
-            "history": history,
-            "overlaps": overlaps
-        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/add-watch', methods=['POST'])
+def add_watch():
+    try:
+        data = request.get_json()
+        watch_collection.insert_one({
+            "target_name": data.get('target_name'),
+            "user_email": data.get('user_email')
+        })
+        return jsonify({"status": "success", "message": "You will be notified of future matches."}), 200
     except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/contact-uploader', methods=['POST'])
@@ -237,7 +161,5 @@ def contact_uploader():
         return jsonify({"status": "success", "message": "Inquiry sent privately."}), 200
     except Exception as e: return jsonify({"status": "error", "message": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
-
-app.config['DEBUG'] = True
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
