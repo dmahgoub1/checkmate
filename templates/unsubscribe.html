@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe - Checkmate</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root { 
+            --brand: #ff4b81; 
+            --dark: #0a0a0a; 
+            --card-bg: #141414;
+            --border: #1f1f1f;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--dark); 
+            color: #fff; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        p {
+            color: #ccc;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        input {
+            width: 100%;
+            background: #0f0f0f;
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--brand);
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--brand);
+            color: #fff;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(255, 75, 129, 0.3);
+        }
+
+        .success-message {
+            display: none;
+            background: rgba(75, 255, 129, 0.1);
+            border: 1px solid #4bff81;
+            color: #4bff81;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 24px;
+            color: var(--brand);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Checkmate" class="logo">
+        
+        <h1>Unsubscribe from Alerts</h1>
+        <p>Enter your email address to stop receiving watch alerts from CheckMate.</p>
+
+        <div id="form-container">
+            <input type="email" id="email" placeholder="Your email address" value="{{ email if email else '' }}">
+            <button class="btn" onclick="unsubscribe()">Unsubscribe</button>
+        </div>
+
+        <div id="success-message" class="success-message">
+            ✓ Successfully unsubscribed! You will no longer receive alert emails.
+        </div>
+
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+
+    <script>
+        async function unsubscribe() {
+            const email = document.getElementById('email').value;
+            
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+
+            try {
+                const response = await fetch('/unsubscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    document.getElementById('form-container').style.display = 'none';
+                    document.getElementById('success-message').style.display = 'block';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Failed to unsubscribe. Please try again.');
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('email').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                unsubscribe();
+            }
+        });
+    </script>
+</body>
+</html>

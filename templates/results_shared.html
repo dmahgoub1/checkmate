@@ -59,10 +59,55 @@
     
     <a href="/search" class="btn-action" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">Run New Scan</a>    
     <a href="/" class="btn-action btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">Return Home</a>
+    
+    <div style="width: 100%; max-width: 500px; margin-top: 40px; padding: 20px; background: rgba(255, 75, 129, 0.05); border: 1px solid #333; border-radius: 12px; text-align: center;">
+        <p style="font-size: 0.85rem; color: #888; margin-bottom: 12px;">Is this your information? You can request removal.</p>
+        <button onclick="showRemovalForm()" style="background: #333; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem;">Request Removal of My Information</button>
+        
+        <div id="removal-form" style="display: none; margin-top: 20px; text-align: left;">
+            <input type="text" id="removal-name" placeholder="Your name" style="width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-sizing: border-box;">
+            <input type="email" id="removal-email" placeholder="Your email" style="width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-sizing: border-box;">
+            <textarea id="removal-reason" placeholder="Reason for removal (optional)" style="width: 100%; background: #000; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-sizing: border-box; resize: vertical; min-height: 80px;"></textarea>
+            <button onclick="submitRemovalRequest()" style="background: var(--brand); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%;">Submit Removal Request</button>
+        </div>
+    </div>
 
     <script>
         const resultId = "{{ result_id }}";
         let currentMatchedName = "";
+
+        function showRemovalForm() {
+            document.getElementById('removal-form').style.display = 'block';
+        }
+
+        async function submitRemovalRequest() {
+            const name = document.getElementById('removal-name').value;
+            const email = document.getElementById('removal-email').value;
+            const reason = document.getElementById('removal-reason').value;
+
+            if (!name || !email) {
+                alert('Please provide your name and email');
+                return;
+            }
+
+            try {
+                const response = await fetch('/request-removal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, reason })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert(result.message);
+                    document.getElementById('removal-form').style.display = 'none';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Failed to submit request. Please try again.');
+            }
+        }
 
         function toggleContactForm(index) {
             const form = document.getElementById(`contact-form-${index}`);

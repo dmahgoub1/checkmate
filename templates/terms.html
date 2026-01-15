@@ -125,6 +125,12 @@
             opacity: 0.8;
         }
 
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--brand), transparent);
+            margin: 60px 0;
+        }
+
         @media (max-width: 640px) {
             body { padding: 24px 16px 60px; }
             h1 { font-size: 2rem; }
@@ -138,9 +144,9 @@
         <a href="/" class="back-link">← Back to Home</a>
         
         <div class="header">
-            <img src="logo.png" alt="Checkmate" class="logo">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Checkmate" class="logo">
             <h1>Terms of Service</h1>
-      
+            <p class="last-updated">Last Updated: January 15, 2026</p>
         </div>
 
         
@@ -186,7 +192,7 @@
                 <li>By uploading a photo, you consent to facial recognition analysis</li>
                 <li>Biometric data is used solely for identity matching purposes</li>
                 <li>We do not sell or share biometric data with third parties for marketing purposes</li>
-                <li>See our Privacy Policy for detailed information about data retention and your rights</li>
+                <li>See our Privacy Policy below for detailed information about data retention and your rights</li>
             </ul>
 
             <h2>6. Accuracy of Information</h2>
@@ -212,7 +218,7 @@
             <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW:</p>
             <ul>
                 <li>Checkmate shall not be liable for any indirect, incidental, special, consequential, or punitive damages</li>
-                <li>Our total liability for any claims shall not exceed the amount you paid to use the Service in the past 12 months, or $100 CAD, whichever is greater</li>
+                <li>Our total liability for any claims shall not exceed $100 USD</li>
                 <li>We are not responsible for damages arising from your use of or inability to use the Service</li>
                 <li>We are not responsible for user-submitted content or third-party actions</li>
             </ul>
@@ -235,13 +241,184 @@
                 <li>Any reason at our sole discretion</li>
             </ul>
 
-          
-            <h2>11. Changes to Terms</h2>
+            <h2>11. Governing Law & Jurisdiction</h2>
+            <p>These Terms shall be governed by and construed in accordance with applicable laws. Any disputes arising from these Terms or your use of the Service shall be subject to the exclusive jurisdiction of the appropriate courts.</p>
+
+            <h2>12. Changes to Terms</h2>
             <p>We reserve the right to modify these Terms at any time. We will notify users of material changes via email or through the Service. Your continued use of the Service after changes constitutes acceptance of the modified Terms.</p>
 
-          
- 
-         
+            <h2>13. Contact Information</h2>
+            <p>For questions about these Terms or to report violations, please contact us at:</p>
+            <p><strong>Email:</strong> legal@thecheckmateapp.com</p>
+
+            <h2>14. Severability</h2>
+            <p>If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that these Terms shall otherwise remain in full force and effect.</p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- PRIVACY POLICY SECTION -->
+        <div class="header">
+            <h1>Privacy Policy</h1>
+            <p class="last-updated">Last Updated: January 15, 2026</p>
+        </div>
+
+        <div class="content-section">
+            <h2>1. Introduction</h2>
+            <p>Checkmate ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service.</p>
+            <p><strong>By using Checkmate, you consent to the data practices described in this policy.</strong></p>
+
+            <h2>2. Information We Collect</h2>
+            
+            <h3>2.1 Information You Provide</h3>
+            <ul>
+                <li><strong>Account Information:</strong> Email address, name (if provided via Google Sign-In)</li>
+                <li><strong>Uploaded Photos:</strong> Images you upload to the Service</li>
+                <li><strong>Dating Information:</strong> Names, cities, dates, and comments you provide about individuals</li>
+                <li><strong>Contact Preferences:</strong> Email addresses you provide for alerts or contact requests</li>
+            </ul>
+
+            <h3>2.2 Biometric Data</h3>
+            <ul>
+                <li><strong>Facial Recognition Data:</strong> We extract biometric identifiers (facial encodings) from uploaded photos for identity matching purposes</li>
+                <li>This data is considered sensitive personal information under many privacy laws</li>
+                <li>We retain biometric data indefinitely unless you request deletion</li>
+            </ul>
+
+            <h3>2.3 Automatically Collected Information</h3>
+            <ul>
+                <li><strong>Usage Data:</strong> IP address, browser type, device information, pages visited</li>
+                <li><strong>Cookies & Analytics:</strong> We use Google Analytics to understand how users interact with our Service</li>
+            </ul>
+
+            <h2>3. How We Use Your Information</h2>
+            <p>We use the collected information for the following purposes:</p>
+            <ul>
+                <li><strong>Facial Recognition Matching:</strong> To compare uploaded photos against our database</li>
+                <li><strong>Alert Notifications:</strong> To send email alerts when matches are found</li>
+                <li><strong>Contact Facilitation:</strong> To enable private contact requests between users</li>
+                <li><strong>Service Improvement:</strong> To analyze usage patterns and improve functionality</li>
+                <li><strong>Safety & Compliance:</strong> To detect fraud, abuse, and comply with legal obligations</li>
+                <li><strong>Communication:</strong> To send service-related announcements and respond to inquiries</li>
+            </ul>
+
+            <h2>4. How We Share Your Information</h2>
+            
+            <h3>4.1 With Other Users</h3>
+            <ul>
+                <li>Photos and information you upload may be visible to other users who search for the same person</li>
+                <li>Your contact email is only shared if you explicitly opt-in to receive contact requests</li>
+            </ul>
+
+            <h3>4.2 With Service Providers</h3>
+            <ul>
+                <li><strong>Cloud Hosting:</strong> We use MongoDB Atlas and IBM Cloud Engine for data storage and hosting</li>
+                <li><strong>Email Services:</strong> We use SMTP providers to send alert emails</li>
+                <li><strong>Analytics:</strong> Google Analytics processes usage data</li>
+            </ul>
+
+            <h3>4.3 Legal Requirements</h3>
+            <p>We may disclose your information if required by law, court order, or government regulation, or if we believe disclosure is necessary to:</p>
+            <ul>
+                <li>Comply with legal processes</li>
+                <li>Enforce our Terms of Service</li>
+                <li>Protect the rights, property, or safety of Checkmate, our users, or the public</li>
+            </ul>
+
+            <h3>4.4 Business Transfers</h3>
+            <p>In the event of a merger, acquisition, or sale of assets, your information may be transferred to the acquiring entity.</p>
+
+            <h2>5. Data Retention</h2>
+            <ul>
+                <li><strong>Photos & Biometric Data:</strong> Retained indefinitely unless you request deletion</li>
+                <li><strong>Dating Information:</strong> Retained indefinitely as part of the public database</li>
+                <li><strong>Email Addresses:</strong> Retained until you unsubscribe from alerts or delete your account</li>
+                <li><strong>Cached Results:</strong> Stored for 90 days for shareable links</li>
+            </ul>
+
+            <h2>6. Your Privacy Rights</h2>
+            
+            <h3>6.1 Access & Correction</h3>
+            <p>You have the right to request access to the personal information we hold about you and to request corrections.</p>
+
+            <h3>6.2 Deletion Rights</h3>
+            <p>You may request deletion of:</p>
+            <ul>
+                <li>Your uploaded photos and associated biometric data</li>
+                <li>Your account and contact information</li>
+                <li>Information you submitted about others (subject to our review)</li>
+            </ul>
+            <p>To request deletion, contact us at privacy@thecheckmateapp.com</p>
+
+            <h3>6.3 Opt-Out Rights</h3>
+            <ul>
+                <li><strong>Email Alerts:</strong> Unsubscribe using the link in any alert email</li>
+                <li><strong>Contact Requests:</strong> Disable in your account settings</li>
+                <li><strong>Cookies:</strong> Adjust your browser settings to refuse cookies</li>
+            </ul>
+
+            <h3>6.4 Biometric Data Rights (Illinois BIPA)</h3>
+            <p>If you are an Illinois resident:</p>
+            <ul>
+                <li>You have the right to know that we collect biometric identifiers</li>
+                <li>You have the right to consent before we collect biometric data (by uploading photos, you provide consent)</li>
+                <li>You have the right to know how long we retain biometric data (indefinitely unless you request deletion)</li>
+                <li>You have the right to request destruction of your biometric data</li>
+            </ul>
+
+            <h3>6.5 California Privacy Rights (CCPA)</h3>
+            <p>If you are a California resident, you have additional rights including:</p>
+            <ul>
+                <li>Right to know what personal information we collect and how we use it</li>
+                <li>Right to delete personal information (with certain exceptions)</li>
+                <li>Right to opt-out of the "sale" of personal information (we do not sell your data)</li>
+                <li>Right to non-discrimination for exercising your privacy rights</li>
+            </ul>
+
+            <h3>6.6 European Privacy Rights (GDPR)</h3>
+            <p>If you are in the European Union, you have rights including:</p>
+            <ul>
+                <li>Right to access, rectification, and erasure</li>
+                <li>Right to data portability</li>
+                <li>Right to object to processing</li>
+                <li>Right to withdraw consent</li>
+                <li>Right to lodge a complaint with a supervisory authority</li>
+            </ul>
+
+            <h2>7. Security Measures</h2>
+            <p>We implement reasonable security measures to protect your information, including:</p>
+            <ul>
+                <li>Encryption of data in transit (HTTPS/TLS)</li>
+                <li>Secure cloud storage with access controls</li>
+                <li>Regular security assessments</li>
+            </ul>
+            <p><strong>However, no method of transmission or storage is 100% secure.</strong> We cannot guarantee absolute security of your information.</p>
+
+            <h2>8. Children's Privacy</h2>
+            <p>Our Service is not intended for individuals under 18 years of age. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.</p>
+
+            <h2>9. International Data Transfers</h2>
+            <p>Your information may be transferred to and processed in countries other than your country of residence. By using the Service, you consent to such transfers. We take steps to ensure adequate protection of your data in accordance with this Privacy Policy.</p>
+
+            <h2>10. Third-Party Links</h2>
+            <p>Our Service may contain links to third-party websites. We are not responsible for the privacy practices of these external sites. We encourage you to review their privacy policies.</p>
+
+            <h2>11. Changes to This Privacy Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of material changes by:</p>
+            <ul>
+                <li>Posting the updated policy on our website</li>
+                <li>Sending an email notification to registered users</li>
+                <li>Updating the "Last Updated" date at the top of this policy</li>
+            </ul>
+            <p>Your continued use of the Service after changes constitutes acceptance of the updated Privacy Policy.</p>
+
+            <h2>12. Contact Us</h2>
+            <p>If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
+            <p><strong>Email:</strong> privacy@thecheckmateapp.com<br>
+            <strong>Legal Email:</strong> legal@thecheckmateapp.com</p>
+
+            <h2>13. Data Protection Officer</h2>
+            <p>For GDPR-related inquiries, you may contact our Data Protection Officer at: dpo@thecheckmateapp.com</p>
         </div>
     </div>
 </body>

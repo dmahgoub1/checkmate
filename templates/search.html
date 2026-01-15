@@ -144,7 +144,7 @@
             gap: 14px;
         }
         
-        input, textarea { 
+        input, select { 
             background: var(--input-bg);
             border: 1px solid var(--border);
             padding: 16px 18px;
@@ -156,14 +156,29 @@
             font-weight: 400;
         }
 
-        input:focus, textarea:focus {
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 16px;
+            padding-right: 48px;
+        }
+
+        select option {
+            background: var(--card-bg);
+            color: #fff;
+        }
+
+        input:focus, select:focus {
             outline: none;
             border-color: var(--brand);
             background: #121212;
             box-shadow: 0 0 0 3px rgba(255, 75, 129, 0.1);
         }
 
-        input::placeholder, textarea::placeholder {
+        input::placeholder {
             color: #555;
         }
         
@@ -189,10 +204,54 @@
             letter-spacing: 1px;
         }
 
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-            line-height: 1.5;
+        .field-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .concern-checkboxes {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(255, 75, 129, 0.05);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--brand);
+            margin: 0;
+            padding: 0;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #ccc;
+            font-weight: 400;
+            flex: 1;
         }
 
         .btn-scan { 
@@ -287,7 +346,7 @@
             body { padding: 30px 16px; }
             .header h2 { font-size: 1.2rem; }
             .upload-container { padding: 40px 24px; }
-            input, textarea { font-size: 0.9rem; padding: 14px 16px; }
+            input, select { font-size: 0.9rem; padding: 14px 16px; }
         }
 
         .site-footer {
@@ -352,21 +411,42 @@
         </div>
 
         <div class="form-group">
-            <input type="text" id="subj-name" placeholder="Name">
+            <input type="text" id="subj-name" placeholder="Name" required>
             <input type="text" id="city" placeholder="City">
             
             <div class="date-row">
                 <div class="date-input-group">
                     <span class="date-label">Dating Start Date</span>
-                    <input type="date" id="start-date">
+                    <input type="date" id="start-date" required>
                 </div>
                 <div class="date-input-group">
                     <span class="date-label">Dating End Date</span>
                     <input type="date" id="end-date">
                 </div>
             </div>
+
+            <div>
+                <div class="field-label">Reason for Flagging (Select all that apply)</div>
+                <div class="concern-checkboxes">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="concern-concurrent" value="Dating multiple people simultaneously">
+                        <label for="concern-concurrent">Dating multiple people simultaneously</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="concern-apps" value="Active on dating apps while in a relationship">
+                        <label for="concern-apps">Active on dating apps while in a relationship</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="concern-relationship" value="Currently in a committed relationship with me">
+                        <label for="concern-relationship">Currently in a committed relationship with me</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="concern-safety" value="Safety concern">
+                        <label for="concern-safety">Safety concern</label>
+                    </div>
+                </div>
+            </div>
             
-            <textarea id="details" rows="3" placeholder="Additional Details or Experience..."></textarea>
             <button id="scan-btn" class="btn-scan">Run Checkmate Scan</button>
         </div>
     </div>
@@ -424,15 +504,28 @@
             e.preventDefault();
             if (!base64Image) return alert("Please upload a photo first.");
 
+            const name = document.getElementById('subj-name').value;
+            const startDate = document.getElementById('start-date').value;
+
+            if (!name || !startDate) {
+                return alert("Please fill in Name and Dating Start Date.");
+            }
+
+            // Collect selected concerns
+            const concerns = [];
+            document.querySelectorAll('.concern-checkboxes input[type="checkbox"]:checked').forEach(checkbox => {
+                concerns.push(checkbox.value);
+            });
+
             document.getElementById('loading-overlay').style.display = "flex";
 
             const payload = {
                 image: base64Image,
-                name: document.getElementById('subj-name').value,
+                name: name,
                 city: document.getElementById('city').value,
-                start_date: document.getElementById('start-date').value,
+                start_date: startDate,
                 end_date: document.getElementById('end-date').value,
-                review_text: document.getElementById('details').value,
+                review_text: concerns.length > 0 ? concerns.join('; ') : 'No specific concerns flagged',
                 submitter_email: sessionStorage.getItem('user_email') || "anonymous"
             };
 
