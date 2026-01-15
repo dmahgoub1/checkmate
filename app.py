@@ -76,6 +76,8 @@ View full history and all photos for {name}:
 ---
 This is an automated alert from CheckMate.
 You received this email because you subscribed to watch alerts for {name}.
+
+To unsubscribe from alerts: https://thecheckmateapp.com/unsubscribe?email={recipient_email}
 """
         
         msg.attach(MIMEText(body, 'plain'))
@@ -157,6 +159,7 @@ def get_results(result_id):
         if not cached_result:
             return jsonify({"status": "error", "message": "Results not found or expired."}), 404
         
+        # The history is already formatted with 'image_data' key when it was cached
         # Return the cached results data
         return jsonify({
             "status": "success",
@@ -251,6 +254,75 @@ def contact_uploader():
         print(f"Error in contact-uploader: {e}", flush=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/request-removal', methods=['POST'])
+def request_removal():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        email = data.get('email')
+        reason = data.get('reason')
+        
+        if not all([name, email]):
+            return jsonify({"status": "error", "message": "Name and email are required"}), 400
+        
+        # Send removal request email to admin
+        if SMTP_USER and SMTP_PASS and ALERTS_EMAIL:
+            msg = MIMEMultipart()
+            msg['From'] = SMTP_USER
+            msg['To'] = ALERTS_EMAIL
+            msg['Subject'] = f"Removal Request: {name}"
+            
+            body = f"""A user has requested removal of their information from CheckMate.
+
+Name: {name}
+Email: {email}
+Reason: {reason or 'Not provided'}
+
+Please review this request and take appropriate action.
+"""
+            msg.attach(MIMEText(body, 'plain'))
+            
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+            server.quit()
+        
+        return jsonify({"status": "success", "message": "Removal request submitted. We'll review and respond within 48 hours."}), 200
+        
+    except Exception as e:
+        print(f"Error in request-removal: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/unsubscribe', methods=['GET', 'POST'])
+def unsubscribe():
+    if request.method == 'GET':
+        email = request.args.get('email')
+        return render_template('unsubscribe.html', email=email)
+    
+    # POST request
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({"status": "error", "message": "Email is required"}), 400
+        
+        # Remove from watch_collection
+        if watch_collection:
+            result = watch_collection.delete_many({"email": email})
+            
+            return jsonify({
+                "status": "success", 
+                "message": f"Unsubscribed {result.deleted_count} alert(s). You will no longer receive emails."
+            }), 200
+        else:
+            return jsonify({"status": "error", "message": "Database connection issue"}), 500
+        
+    except Exception as e:
+        print(f"Error in unsubscribe: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/submit-and-check', methods=['POST'])
 def submit_and_check():
     # Graceful check if database is down
@@ -299,22 +371,7 @@ def submit_and_check():
                 break
 
         if match_found:
-            # Fetch ALL historical records for this matched person
-            history_records = list(faces_collection.find({"name": matched_name}))
-            
-            # Format history for frontend
-            history = []
-            for rec in history_records:
-                history.append({
-                    "image_data": rec.get('image'),
-                    "start_date": rec.get('start_date', 'N/A'),
-                    "end_date": rec.get('end_date', 'Present'),
-                    "city": rec.get('city', 'Unknown'),
-                    "review_text": rec.get('review_text', 'No comments provided.'),
-                    "contact_email": rec.get('contact_email')  # Include contact email if available
-                })
-            
-            # Store the NEW submission even though it's a match
+            # Store the NEW submission FIRST before fetching history
             insert_result = faces_collection.insert_one({
                 "name": matched_name,
                 "email": submitter_email,
@@ -328,6 +385,23 @@ def submit_and_check():
             })
             
             submission_id = str(insert_result.inserted_id)
+            
+            # NOW fetch ALL historical records for this matched person (including the one we just added)
+            history_records = list(faces_collection.find({"name": matched_name}))
+            
+            # Format history for frontend
+            history = []
+            for rec in history_records:
+                image_data = rec.get('image')
+                print(f"DEBUG: Processing record, has image: {image_data is not None}, image length: {len(image_data) if image_data else 0}", flush=True)
+                history.append({
+                    "image_data": image_data,  # Frontend expects 'image_data' but DB stores as 'image'
+                    "start_date": rec.get('start_date', 'N/A'),
+                    "end_date": rec.get('end_date', 'Present'),
+                    "city": rec.get('city', 'Unknown'),
+                    "review_text": rec.get('review_text', 'No comments provided.'),
+                    "contact_email": rec.get('contact_email')  # Include contact email if available
+                })
             
             # Generate unique result ID and cache the results
             result_id = secrets.token_urlsafe(16)
